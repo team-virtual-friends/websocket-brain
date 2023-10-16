@@ -1,37 +1,52 @@
 package main
 
 import (
-	"log"
+	"flag"
+	"net/http"
 
-	"github.com/lesismal/nbio"
+	"github.com/gorilla/websocket"
+	"github.com/sieglu2/virtual-friends-brain/core"
+	"github.com/sieglu2/virtual-friends-brain/foundation"
 )
 
-func main() {
-	engine := nbio.NewEngine(nbio.Config{
-		Network:            "tcp", //"udp", "unix"
-		Addrs:              []string{":8510"},
-		MaxWriteBufferSize: 6 * 1024 * 1024,
-	})
+var addr = flag.String("addr", "localhost:8510", "Virtual Friends Brain")
 
-	// hanlde new connection
-	engine.OnOpen(func(c *nbio.Conn) {
-		log.Println("OnOpen:", c.RemoteAddr().String())
-	})
-	// hanlde connection closed
-	engine.OnClose(func(c *nbio.Conn, err error) {
-		log.Println("OnClose:", c.RemoteAddr().String(), err)
-	})
-	// handle data
-	engine.OnData(func(c *nbio.Conn, data []byte) {
-		c.Write(append([]byte{}, data...))
-	})
+var upgrader = websocket.Upgrader{} // use default options
 
-	err := engine.Start()
+func echo(w http.ResponseWriter, r *http.Request) {
+	logger := foundation.Logger()
+
+	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatalf("nbio.Start failed: %v\n", err)
+		logger.Errorf("failed to upgrade: %w", err)
 		return
 	}
-	defer engine.Stop()
+	defer c.Close()
 
-	<-make(chan int)
+	go func() {
+		for {
+			mt, message, err := c.ReadMessage()
+			if err != nil {
+				logger.Errorf("failed to read: %w", err)
+				break
+			}
+
+			logger.Infof("recv: %s", message)
+
+			err = c.WriteMessage(mt, message)
+			if err != nil {
+				logger.Errorf("failed to write: %w", err)
+				break
+			}
+		}
+	}()
+}
+
+func main() {
+	flag.Parse()
+
+	http.HandleFunc("/echo", echo)
+	http.HandleFunc("/in-game", core.InGame)
+
+	foundation.Logger().Fatal(http.ListenAndServe(*addr, nil))
 }
