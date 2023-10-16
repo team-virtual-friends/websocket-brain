@@ -15,7 +15,7 @@ const (
 
 var (
 	// globalLogger is global zap logger.
-	globalLogger Logging = NewQuietLogger("error")
+	globalLogger Logging = NewQuietLogger("info")
 
 	// loggerOnceInit guarantees initialize logger only once.
 	loggerOnceInit sync.Once

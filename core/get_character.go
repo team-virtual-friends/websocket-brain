@@ -49,7 +49,7 @@ func determineLoader(characterUrl string, response *virtualfriends_go.GetCharact
 func HandleGetCharacter(request *virtualfriends_go.GetCharacterRequest, vfContext *VfContext) error {
 	logger := foundation.Logger()
 
-	vfResponse := &virtualfriends_go.VfResponse{}
+	// vfResponse := &virtualfriends_go.VfResponse{}
 	response := &virtualfriends_go.GetCharacterResponse{}
 
 	// Generate a new UUID
@@ -63,7 +63,7 @@ func HandleGetCharacter(request *virtualfriends_go.GetCharacterRequest, vfContex
 
 	if strings.ToLower(request.CharacterId) == "mina" {
 		if err := determineLoader("vf://blob/mina", response); err != nil {
-			err = fmt.Errorf("failed to determin loader for mina: %w", err)
+			err = fmt.Errorf("failed to determin loader for mina: %v", err)
 			logger.Error(err)
 			return err
 		}
@@ -74,5 +74,8 @@ func HandleGetCharacter(request *virtualfriends_go.GetCharacterRequest, vfContex
 		response.Gender = virtualfriends_go.Gender_Gender_Female
 		response.FriendName = "mina"
 
+		response.Greeting = "Hi there, I'm Mina, an AI assistant created by the Virtual Friends team. What can I help you?"
+
 	}
+	return nil
 }

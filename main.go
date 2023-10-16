@@ -18,28 +18,29 @@ func echo(w http.ResponseWriter, r *http.Request) {
 
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Errorf("failed to upgrade: %w", err)
+		logger.Errorf("failed to upgrade: %v", err)
 		return
 	}
 	defer c.Close()
 
-	go func() {
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				logger.Errorf("failed to read: %w", err)
-				break
-			}
+	logger.Infof("connected from: %+v", c.RemoteAddr())
 
-			logger.Infof("recv: %s", message)
-
-			err = c.WriteMessage(mt, message)
-			if err != nil {
-				logger.Errorf("failed to write: %w", err)
-				break
-			}
+	for {
+		mt, message, err := c.ReadMessage()
+		if err != nil {
+			// logger.Errorf("failed to read: %v", err)
+			logger.Infof("disconnected to %+v", c.RemoteAddr())
+			break
 		}
-	}()
+
+		logger.Infof("recv: %s", message)
+
+		err = c.WriteMessage(mt, message)
+		if err != nil {
+			logger.Errorf("failed to write: %v", err)
+			break
+		}
+	}
 }
 
 func main() {

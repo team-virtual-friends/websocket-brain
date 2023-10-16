@@ -23,7 +23,7 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 		SendResp: func(vfResponse *virtualfriends_go.VfResponse) error {
 			vfResponseBytes, err := proto.Marshal(vfResponse)
 			if err != nil {
-				logger.Errorf("failed to marshal: %w", err)
+				logger.Errorf("failed to marshal: %v", err)
 				return err
 			}
 			return conn.WriteMessage(websocket.BinaryMessage, vfResponseBytes)
@@ -41,46 +41,44 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Errorf("failed to upgrade: %w", err)
+		logger.Errorf("failed to upgrade: %v", err)
 		return
 	}
 	defer conn.Close()
 
-	go func() {
-		vfContext := OnConnect(conn)
+	vfContext := OnConnect(conn)
 
-		for {
-			mt, message, err := conn.ReadMessage()
-			if err != nil {
-				OnDisconnect(vfContext)
-				break
-			}
-
-			vfRequest := &virtualfriends_go.VfRequest{}
-			if err = proto.Unmarshal(message, vfRequest); err != nil {
-				logger.Errorf("failed to unmarshal: %w", err)
-				break
-			}
-
-			switch vfRequest.Request.(type) {
-			case *virtualfriends_go.VfRequest_Echo:
-				logger.Errorf("not supported for now")
-
-			case *virtualfriends_go.VfRequest_StreamReplyMessage:
-
-			case *virtualfriends_go.VfRequest_DownloadAssetBundle:
-				logger.Errorf("deprecated")
-
-			case *virtualfriends_go.VfRequest_DownloadBlob:
-
-			case *virtualfriends_go.VfRequest_GetCharacter:
-			}
-
-			err = conn.WriteMessage(mt, message)
-			if err != nil {
-				logger.Errorf("failed to write: %w", err)
-				break
-			}
+	for {
+		mt, message, err := conn.ReadMessage()
+		if err != nil {
+			OnDisconnect(vfContext)
+			break
 		}
-	}()
+
+		vfRequest := &virtualfriends_go.VfRequest{}
+		if err = proto.Unmarshal(message, vfRequest); err != nil {
+			logger.Errorf("failed to unmarshal: %v", err)
+			break
+		}
+
+		switch vfRequest.Request.(type) {
+		case *virtualfriends_go.VfRequest_Echo:
+			logger.Errorf("not supported for now")
+
+		case *virtualfriends_go.VfRequest_StreamReplyMessage:
+
+		case *virtualfriends_go.VfRequest_DownloadAssetBundle:
+			logger.Errorf("deprecated")
+
+		case *virtualfriends_go.VfRequest_DownloadBlob:
+
+		case *virtualfriends_go.VfRequest_GetCharacter:
+		}
+
+		err = conn.WriteMessage(mt, message)
+		if err != nil {
+			logger.Errorf("failed to write: %v", err)
+			break
+		}
+	}
 }
