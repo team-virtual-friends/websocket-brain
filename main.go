@@ -48,7 +48,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "./secret/ysong-chat-845e43a6c55b.json")
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "./secrets/ysong-chat-845e43a6c55b.json")
 
 	flag.Parse()
 
@@ -68,5 +68,6 @@ func main() {
 	http.HandleFunc("/echo", echo)
 	http.HandleFunc("/in-game", core.InGame)
 
-	foundation.Logger().Fatal(http.ListenAndServe(*addr, nil))
+	logger.Infof("starting server...")
+	logger.Fatal(http.ListenAndServe(*addr, nil))
 }

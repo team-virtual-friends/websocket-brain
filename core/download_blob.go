@@ -2,14 +2,18 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/sieglu2/virtual-friends-brain/common"
+	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"golang.org/x/sync/errgroup"
 )
 
 func DownloadAllAssetBundles(ctx context.Context) error {
+	logger := foundation.Logger()
+
 	platforms := []string{
 		"WebGL",
 		"iOS",
@@ -41,10 +45,12 @@ func DownloadAllAssetBundles(ctx context.Context) error {
 
 	baseFolder := "./temp"
 	bucketName := "vf-unity-data"
+
 	for _, platform := range platforms {
 		gcsPath := fmt.Sprintf("raw-characters/%s", platform)
+		downloadFolder := fmt.Sprintf("%s/%s", baseFolder, gcsPath)
+
 		for _, assetBundleName := range assetBundleNames {
-			downloadFolder := fmt.Sprintf("%s/%s", baseFolder, gcsPath)
 			err := os.MkdirAll(downloadFolder, os.ModePerm)
 			if err != nil {
 				err = fmt.Errorf("failed to MkdirAll(%s): %v", downloadFolder, err)
@@ -53,17 +59,22 @@ func DownloadAllAssetBundles(ctx context.Context) error {
 
 			gcsPath := fmt.Sprintf("%s/%s", gcsPath, assetBundleName)
 			filePath := fmt.Sprintf("%s/%s", downloadFolder, assetBundleName)
-			errGroup.Go(func() error {
-				blob, err := common.GetGlobalClients().GetGcsClient().DownloadBlob(groupCtx, bucketName, gcsPath)
-				if err != nil {
-					return err
-				}
-				err = os.WriteFile(filePath, blob, 0644)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
+			if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+				logger.Infof("starting to download blob %s", gcsPath)
+				errGroup.Go(func() error {
+					blob, err := common.GetGlobalClients().GetGcsClient().DownloadBlob(groupCtx, bucketName, gcsPath)
+					if err != nil {
+						return err
+					}
+					err = os.WriteFile(filePath, blob, 0644)
+					if err != nil {
+						return err
+					}
+					return nil
+				})
+			} else {
+				logger.Infof("blob %s already exists", filePath)
+			}
 		}
 	}
 
@@ -71,5 +82,7 @@ func DownloadAllAssetBundles(ctx context.Context) error {
 		err = fmt.Errorf("failed to download assetbundles: %v", err)
 		return err
 	}
+
+	logger.Infof("done downloading blobs")
 	return nil
 }
