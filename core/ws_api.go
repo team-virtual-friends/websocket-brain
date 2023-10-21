@@ -1,9 +1,12 @@
 package core
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 	"google.golang.org/protobuf/proto"
@@ -13,14 +16,24 @@ var upgrader = websocket.Upgrader{} // use default options
 
 type VfContext struct {
 	// use this delegate to send VfResponse to client single or multiple times.
-	SendResp func(vfResponse *virtualfriends_go.VfResponse) error
+	sendResp func(vfResponse *virtualfriends_go.VfResponse) error
+
+	clients *common.Clients
+}
+
+func FromError(err error) *virtualfriends_go.VfResponse {
+	return &virtualfriends_go.VfResponse{
+		Error: &virtualfriends_go.CustomError{
+			ErrorMessage: err.Error(),
+		},
+	}
 }
 
 func OnConnect(conn *websocket.Conn) *VfContext {
 	logger := foundation.Logger()
 
 	return &VfContext{
-		SendResp: func(vfResponse *virtualfriends_go.VfResponse) error {
+		sendResp: func(vfResponse *virtualfriends_go.VfResponse) error {
 			vfResponseBytes, err := proto.Marshal(vfResponse)
 			if err != nil {
 				logger.Errorf("failed to marshal: %v", err)
@@ -28,6 +41,8 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 			}
 			return conn.WriteMessage(websocket.BinaryMessage, vfResponseBytes)
 		},
+
+		clients: common.GetGlobalClients(),
 	}
 }
 
@@ -49,7 +64,7 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 	vfContext := OnConnect(conn)
 
 	for {
-		mt, message, err := conn.ReadMessage()
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			OnDisconnect(vfContext)
 			break
@@ -61,6 +76,7 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
+		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		switch vfRequest.Request.(type) {
 		case *virtualfriends_go.VfRequest_Echo:
 			logger.Errorf("not supported for now")
@@ -73,12 +89,15 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 		case *virtualfriends_go.VfRequest_DownloadBlob:
 
 		case *virtualfriends_go.VfRequest_GetCharacter:
+			request := vfRequest.Request.(*virtualfriends_go.VfRequest_GetCharacter).GetCharacter
+			HandleGetCharacter(handlingCtx, vfContext, request)
 		}
+		handlingCancel()
 
-		err = conn.WriteMessage(mt, message)
-		if err != nil {
-			logger.Errorf("failed to write: %v", err)
-			break
-		}
+		// err = conn.WriteMessage(mt, message)
+		// if err != nil {
+		// 	logger.Errorf("failed to write: %v", err)
+		// 	break
+		// }
 	}
 }
