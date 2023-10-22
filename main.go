@@ -13,7 +13,7 @@ import (
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 )
 
-var addr = flag.String("addr", "localhost:8510", "Virtual Friends Brain")
+var addr = flag.String("addr", "127.0.0.1:8510", "Virtual Friends Brain")
 
 var upgrader = websocket.Upgrader{} // use default options
 
@@ -68,6 +68,6 @@ func main() {
 	http.HandleFunc("/echo", echo)
 	http.HandleFunc("/in-game", core.InGame)
 
-	logger.Infof("starting server...")
+	logger.Infof("starting server at %s", *addr)
 	logger.Fatal(http.ListenAndServe(*addr, nil))
 }

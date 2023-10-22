@@ -12,7 +12,24 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var upgrader = websocket.Upgrader{} // use default options
+const (
+	VirtualFriendsOrigin = "https://virtualfriends.ai"
+)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		origins := r.Header["Origin"]
+		if len(origins) == 0 {
+			return false
+		}
+		for _, origin := range origins {
+			if origin == VirtualFriendsOrigin {
+				return true
+			}
+		}
+		return false
+	},
+} // use default options
 
 type VfContext struct {
 	// use this delegate to send VfResponse to client single or multiple times.
@@ -87,6 +104,8 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			logger.Errorf("deprecated")
 
 		case *virtualfriends_go.VfRequest_DownloadBlob:
+			request := vfRequest.Request.(*virtualfriends_go.VfRequest_DownloadBlob).DownloadBlob
+			HandleDownloadBlob(handlingCtx, vfContext, request)
 
 		case *virtualfriends_go.VfRequest_GetCharacter:
 			request := vfRequest.Request.(*virtualfriends_go.VfRequest_GetCharacter).GetCharacter

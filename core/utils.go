@@ -35,5 +35,5 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	if voiceConfig.Octaves == 0 {
 		return voiceBytes, nil
 	}
-	return speech.TransposeSound(voiceBytes, float64(voiceConfig.Octaves))
+	return speech.PitchShift(voiceBytes, float64(voiceConfig.Octaves))
 }
