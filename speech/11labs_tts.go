@@ -3,12 +3,12 @@ package speech
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
-	"os/exec"
 
+	"github.com/iFaceless/godub"
+	"github.com/iFaceless/godub/converter"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 )
 
@@ -65,41 +65,25 @@ func TextToSpeechWith11Labs(ctx context.Context, text, voiceId string) ([]byte, 
 }
 
 func Mp3ToWav(mp3Data []byte) ([]byte, error) {
-	// Create an FFmpeg command with input from a pipe and output to a pipe
-	cmd := exec.Command("ffmpeg", "-i", "pipe:0", "-f", "wav", "pipe:1")
-
-	// Set up input and output pipes
-	cmd.Stdin = bytes.NewReader(mp3Data)
-	var wavOutput bytes.Buffer
-	cmd.Stdout = &wavOutput
-
-	// Run the FFmpeg command
-	err := cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	return wavOutput.Bytes(), nil
-}
-
-func TextToSpeechWith11Labs2(ctx context.Context, text, voiceId string) ([]byte, error) {
 	logger := foundation.Logger()
-
-	output, err := foundation.AccessLocalFlask(ctx, "11labs_clone", map[string]string{
-		"text":     text,
-		"voice_id": voiceId,
-	})
+	segment, err := godub.NewLoader().Load(bytes.NewReader(mp3Data))
 	if err != nil {
-		err = fmt.Errorf("error calling AccessLocalFlask for 11labs_clone: %v", err)
+		err = fmt.Errorf("failed to load mp3: %v", err)
 		logger.Error(err)
 		return nil, err
 	}
 
-	decodedData, err := base64.StdEncoding.DecodeString(string(output))
+	wavByteBuffer := bytes.Buffer{}
+	err = converter.NewConverter(&wavByteBuffer).
+		WithBitRate(int(segment.AsWaveAudio().BitsPerSample)).
+		WithDstFormat("wav").
+		WithChannels(int(segment.Channels())).
+		WithSampleRate(int(segment.AsWaveAudio().SampleRate)).
+		Convert(bytes.NewReader(mp3Data))
 	if err != nil {
-		err = fmt.Errorf("error decoding for 11labs_clone: %v", err)
+		err = fmt.Errorf("failed to convert mp3 to wav: %v", err)
 		logger.Error(err)
 		return nil, err
 	}
-	return decodedData, nil
+	return wavByteBuffer.Bytes(), nil
 }

@@ -14,7 +14,7 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	logger := foundation.Logger()
 
 	if len(voiceConfig.ElevenLabId) > 0 {
-		wavBytes, err := speech.TextToSpeechWith11Labs2(ctx, text, voiceConfig.ElevenLabId)
+		wavBytes, err := speech.TextToSpeechWith11Labs(ctx, text, voiceConfig.ElevenLabId)
 		if err != nil {
 			err = fmt.Errorf("failed to TextToSpeechWith11Labs: %v", err)
 			logger.Error(err)

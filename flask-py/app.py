@@ -39,42 +39,6 @@ def pitch_shift(audio_bytes:bytes, octaves:float) -> bytes:
     # Export the audio as WAV format bytes
     return audio_segment.export(format="wav").read()
 
-def convert_mp3_to_wav(mp3_bytes: bytes) -> bytes:
-    seg = AudioSegment.from_mp3(io.BytesIO(mp3_bytes))
-    wav_io = io.BytesIO()
-    seg.export(wav_io, format="wav")
-    return wav_io.getvalue()
-
-def text_to_audio_with_11labs(text, voice_id) -> bytes:
-    api_key = "4fb91ffd3e3e3cd35cbf2d19a64fd4e9"
-    url = "https://api.elevenlabs.io/v1/text-to-speech/" + voice_id + "?optimize_streaming_latency=3"
-
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": api_key
-    }
-
-    data = {
-        "text": text,
-        "model_id": "eleven_monolingual_v1",
-        "voice_settings": {
-            "stability": 0.9,
-            "similarity_boost": 0.9
-        }
-    }
-
-    response = requests.post(url, json=data, headers=headers)
-
-    wav = None
-    if response.status_code == 200:
-        logger.error(f"Request was successful. Status code: {response.status_code}" )
-        mp3_content = response.content
-        wav = convert_mp3_to_wav(mp3_content)
-    else:
-        logger.error(f"Request failed with data {data}. Status code: {response.status_code}")
-    return wav
-
 @app.route('/pitch_shift', methods=['POST'])
 def pitch_shift_handler():
     if request.method == 'POST':
@@ -91,21 +55,6 @@ def pitch_shift_handler():
             return base64.b64encode(outputBytes)
         except Exception as e:
             return "Invalid data format", 400
-    else:
-        return "Unsupported request method", 405
-    
-@app.route("/11labs_clone", methods=['POST'])
-def get_11labs_clone():
-    if request.method == 'POST':
-        try:
-            data = request.json
-            text = data.get('text', '')
-            voice_id = data.get('voice_id', '')
-            wav_bytes = text_to_audio_with_11labs(text, voice_id)
-
-            return base64.b64encode(wav_bytes)
-        except Exception as e:
-            return "failed to tts with 11labs", 400
     else:
         return "Unsupported request method", 405
 
