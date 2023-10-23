@@ -12,7 +12,8 @@ import (
 type Clients struct {
 	googleTtsClient *speech.GoogleTtsClient
 
-	gcsClient *GcsClient
+	gcsClient       *GcsClient
+	datastoreClient *DatastoreClient
 }
 
 var clients *Clients
@@ -39,6 +40,16 @@ func InitializeClients(ctx context.Context) error {
 		return nil
 	})
 
+	errGroup.Go(func() error {
+		datastoreClient, err := NewDatastoreClient(groupCtx)
+		if err != nil {
+			return err
+		}
+		clients.datastoreClient = datastoreClient
+		return nil
+	})
+
+	// wait for all the parallel initialization to finish.
 	if err := errGroup.Wait(); err != nil {
 		return err
 	}
@@ -56,4 +67,8 @@ func (t *Clients) GetGoogleTtsClient() *speech.GoogleTtsClient {
 
 func (t *Clients) GetGcsClient() *GcsClient {
 	return t.gcsClient
+}
+
+func (t *Clients) GetDatastoreClient() *DatastoreClient {
+	return t.datastoreClient
 }

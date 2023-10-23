@@ -93,7 +93,7 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		switch vfRequest.Request.(type) {
 		case *virtualfriends_go.VfRequest_Echo:
 			logger.Errorf("not supported for now")
@@ -112,11 +112,5 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			HandleGetCharacter(handlingCtx, vfContext, request)
 		}
 		handlingCancel()
-
-		// err = conn.WriteMessage(mt, message)
-		// if err != nil {
-		// 	logger.Errorf("failed to write: %v", err)
-		// 	break
-		// }
 	}
 }

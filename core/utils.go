@@ -4,14 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/speech"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
 
 func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voiceConfig *virtualfriends_go.VoiceConfig) ([]byte, error) {
+	logger := foundation.Logger()
+
 	if len(voiceConfig.ElevenLabId) > 0 {
-		// TODO (yufan.lu), plug in 11Lab API
-		return []byte{}, nil
+		wavBytes, err := speech.TextToSpeechWith11Labs(ctx, text, voiceConfig.ElevenLabId)
+		if err != nil {
+			err = fmt.Errorf("failed to TextToSpeechWith11Labs: %v", err)
+			logger.Error(err)
+			return nil, err
+		}
+
+		return wavBytes, nil
 	}
 
 	var voiceBytes []byte
@@ -29,11 +38,19 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 		return nil, fmt.Errorf("invalid voice_type: %v", voiceConfig.VoiceType)
 	}
 	if err != nil {
+		err = fmt.Errorf("failed to GoogleTtsClient.TextToSpeech: %v", err)
+		logger.Error(err)
 		return nil, err
 	}
 
 	if voiceConfig.Octaves == 0 {
 		return voiceBytes, nil
 	}
-	return speech.PitchShift(voiceBytes, float64(voiceConfig.Octaves))
+	wavBytes, err := speech.PitchShift(ctx, voiceBytes, float64(voiceConfig.Octaves))
+	if err != nil {
+		err = fmt.Errorf("failed to PitchShift: %v", err)
+		logger.Error(err)
+		return nil, err
+	}
+	return wavBytes, nil
 }

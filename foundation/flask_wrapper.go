@@ -2,6 +2,7 @@ package foundation
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,7 @@ const (
 	baseUrl = "http://localhost:8511/"
 )
 
-func AccessLocalFlask(endpoint string, parameters map[string]string) (string, error) {
+func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[string]string) (string, error) {
 	logger := Logger()
 
 	url := baseUrl + endpoint
@@ -32,7 +33,7 @@ func AccessLocalFlask(endpoint string, parameters map[string]string) (string, er
 	paramsBuilder.WriteString("}")
 
 	// Create a request with the payload
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(paramsBuilder.String())))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer([]byte(paramsBuilder.String())))
 	if err != nil {
 		err = fmt.Errorf("error creating request: %v", err)
 		logger.Error(err)

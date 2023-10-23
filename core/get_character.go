@@ -36,7 +36,7 @@ func determineLoader(characterUrl string, response *virtualfriends_go.GetCharact
 			},
 		}
 		return nil
-	} else if regexp.MatchString(avaturnRegexPattern, characterUrl); err == nil && matched {
+	} else if matched, err := regexp.MatchString(avaturnRegexPattern, characterUrl); err == nil && matched {
 		response.LoaderConfig = &virtualfriends_go.GetCharacterResponse_LoaderAvaturn{
 			LoaderAvaturn: &virtualfriends_go.LoaderAvaturn{
 				AvatarUrl: characterUrl,
@@ -84,7 +84,7 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		response.Greeting = "Hi there, I'm Mina, an AI assistant created by the Virtual Friends team. What can I help you?"
 		voiceBytes, err := GenerateVoice(ctx, vfContext, response.Greeting, response.VoiceConfig)
 		if err != nil {
-			err = fmt.Errorf("failed to GenerateVoice: %v", err)
+			err = fmt.Errorf("failed to GenerateVoice for mina: %v", err)
 			logger.Error(err)
 			vfContext.sendResp(FromError(err))
 			return
@@ -116,7 +116,7 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		response.Greeting = "Hello, I'm Einstein, a passionate scientist by day and an ardent stargazer by night."
 		voiceBytes, err := GenerateVoice(ctx, vfContext, response.Greeting, response.VoiceConfig)
 		if err != nil {
-			err = fmt.Errorf("failed to GenerateVoice: %v", err)
+			err = fmt.Errorf("failed to GenerateVoice for einstein: %v", err)
 			logger.Error(err)
 			vfContext.sendResp(FromError(err))
 			return
@@ -125,7 +125,69 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		response.Description = "Einstein is one of the most famous scientists who changed the whole world."
 		response.BasePrompts = common.ExampleCharacterPrompts["einstein"]
 	} else {
-		// TODO (yufan.lu) datastore lookup.
+		character, err := vfContext.clients.GetDatastoreClient().QueryCharacter(ctx, request.CharacterId)
+		if err != nil {
+			err = fmt.Errorf("failed to QueryCharacter: %v", err)
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
+		}
+
+		err = vfContext.clients.GetGcsClient().ExtendCharacterInfo(ctx, character)
+		if err != nil {
+			err = fmt.Errorf("failed to ExtendCharacterInfo: %v", err)
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
+		}
+
+		if err := determineLoader(character.AvatarUrl, response); err != nil {
+			err = fmt.Errorf("failed to determine loader for %s: %v", request.CharacterId, err)
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
+		}
+
+		voiceConfig := &virtualfriends_go.VoiceConfig{}
+		switch strings.ToLower(character.Gender) {
+		case "male":
+			response.Gender = virtualfriends_go.Gender_Gender_Male
+			voiceConfig.VoiceType = virtualfriends_go.VoiceType_VoiceType_NormalMale
+		case "female":
+			response.Gender = virtualfriends_go.Gender_Gender_Female
+			voiceConfig.VoiceType = virtualfriends_go.VoiceType_VoiceType_NormalFemale2
+		}
+		voiceConfig.ElevenLabId = character.ElevenLabId
+		response.VoiceConfig = voiceConfig
+
+		response.FriendName = character.Name
+		if len(response.FriendName) == 0 {
+			response.FriendName = "Virtual Friends Assistant"
+		}
+		response.Greeting = character.Greeting
+		if len(response.Greeting) == 0 {
+			response.Greeting = "hi, I am Virtual Friends Assistant."
+		}
+
+		response.Description = character.Description
+		response.BasePrompts = strings.Join([]string{
+			fmt.Sprintf("name: %s", response.FriendName),
+			fmt.Sprintf("description: %s", response.Description),
+			character.Prompts,
+			fmt.Sprintf("Act as %s", response.FriendName),
+		}, "\n")
+
+		// log response before setting the voiceBytes.
+		logger.Infof("response: %+v", response)
+
+		voiceBytes, err := GenerateVoice(ctx, vfContext, response.Greeting, response.VoiceConfig)
+		if err != nil {
+			err = fmt.Errorf("failed to GenerateVoice: %v", err)
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
+		}
+		response.GreetingWav = voiceBytes
 	}
 
 	vfResponse := &virtualfriends_go.VfResponse{
