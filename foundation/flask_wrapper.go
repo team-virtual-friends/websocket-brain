@@ -63,5 +63,11 @@ func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[strin
 		return "", err
 	}
 
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("non-200 response status code: %d, error: %s", resp.StatusCode, string(output))
+		logger.Error(err)
+		return "", err
+	}
+
 	return string(output), nil
 }

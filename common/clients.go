@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 
+	"github.com/sieglu2/virtual-friends-brain/llm"
 	"github.com/sieglu2/virtual-friends-brain/speech"
 	"golang.org/x/sync/errgroup"
 )
@@ -14,6 +15,8 @@ type Clients struct {
 
 	gcsClient       *GcsClient
 	datastoreClient *DatastoreClient
+
+	chatGptClient *llm.ChatGptClient
 }
 
 var clients *Clients
@@ -49,6 +52,11 @@ func InitializeClients(ctx context.Context) error {
 		return nil
 	})
 
+	errGroup.Go(func() error {
+		clients.chatGptClient = llm.NewChatGptClient()
+		return nil
+	})
+
 	// wait for all the parallel initialization to finish.
 	if err := errGroup.Wait(); err != nil {
 		return err
@@ -71,4 +79,8 @@ func (t *Clients) GetGcsClient() *GcsClient {
 
 func (t *Clients) GetDatastoreClient() *DatastoreClient {
 	return t.datastoreClient
+}
+
+func (t *Clients) GetChatGptClient() *llm.ChatGptClient {
+	return t.chatGptClient
 }

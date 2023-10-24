@@ -11,17 +11,17 @@ import (
 )
 
 const (
-	apiKey           = "4fb91ffd3e3e3cd35cbf2d19a64fd4e9"
-	urlTemplate      = "https://api.elevenlabs.io/v1/text-to-speech/%s?optimize_streaming_latency=3"
-	jsonBodyTemplate = `{"text":"%s","model_id":"eleven_monolingual_v1","voice_settings":{"stability":0.9,"similarity_boost":0.9}}`
+	elevenLabsApiKey           = "4fb91ffd3e3e3cd35cbf2d19a64fd4e9"
+	elevenLabsUrlTemplate      = "https://api.elevenlabs.io/v1/text-to-speech/%s?optimize_streaming_latency=3"
+	elevenLabsJsonBodyTemplate = `{"text":"%s","model_id":"eleven_monolingual_v1","voice_settings":{"stability":0.9,"similarity_boost":0.9}}`
 )
 
 func TextToSpeechWith11Labs(ctx context.Context, text, voiceId string) ([]byte, error) {
 	logger := foundation.Logger()
 
-	jsonBody := fmt.Sprintf(jsonBodyTemplate, text)
+	jsonBody := fmt.Sprintf(elevenLabsJsonBodyTemplate, text)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf(urlTemplate, voiceId), bytes.NewBuffer([]byte(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf(elevenLabsUrlTemplate, voiceId), bytes.NewBuffer([]byte(jsonBody)))
 	if err != nil {
 		err = fmt.Errorf("failed to create POST request to 11labs: %v", err)
 		logger.Error(err)
@@ -30,7 +30,7 @@ func TextToSpeechWith11Labs(ctx context.Context, text, voiceId string) ([]byte, 
 
 	req.Header.Set("Accept", "audio/mpeg")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("xi-api-key", apiKey)
+	req.Header.Set("xi-api-key", elevenLabsApiKey)
 
 	client := &http.Client{}
 

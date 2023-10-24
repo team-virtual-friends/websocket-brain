@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/speech"
@@ -20,11 +19,6 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 			logger.Error(err)
 			return nil, err
 		}
-		file, err := os.Create("./temp/test2.wav")
-		_, err = file.Write(wavBytes)
-		logger.Errorf("save error: %v", err)
-		file.Close()
-
 		return wavBytes, nil
 	}
 

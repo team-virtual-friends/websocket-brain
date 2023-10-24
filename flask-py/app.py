@@ -6,11 +6,26 @@ import requests
 
 from flask import Flask, request
 from pydub import AudioSegment
+from faster_whisper import WhisperModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('gunicorn.error')
 
 app = Flask(__name__)
+
+env = os.environ.get('ENV', 'LOCAL')
+if env == 'PROD' or env == 'STAGING':
+    # Initialize the Whisper ASR model
+    faster_whisper_model = WhisperModel("base", device="cuda", compute_type="float16")
+else:
+    # for local testing, use cpu.
+    faster_whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+
+# for speech_to_text_whisper_gpu specifically.
+class NamedBytesIO(io.BytesIO):
+    def __init__(self, buffer, name=None):
+        super().__init__(buffer)
+        self.name = name
 
 def pitch_shift(audio_bytes:bytes, octaves:float) -> bytes:
     # Create a stream from the bytes
@@ -39,11 +54,16 @@ def pitch_shift(audio_bytes:bytes, octaves:float) -> bytes:
     # Export the audio as WAV format bytes
     return audio_segment.export(format="wav").read()
 
+def speech_to_text_whisper_gpu(wav_bytes:bytes) -> str:
+    audio_buffer = NamedBytesIO(wav_bytes, name="audio.wav")
+    segments, info = faster_whisper_model.transcribe(audio_buffer, beam_size=5)
+    transcribed_text = " ".join(segment.text for segment in segments)
+    return transcribed_text
+
 @app.route('/pitch_shift', methods=['POST'])
 def pitch_shift_handler():
     if request.method == 'POST':
         try:
-            # Parse the JSON data from the request
             data = request.json
 
             b64_encoded = data.get('b64_encoded', '')
@@ -54,7 +74,22 @@ def pitch_shift_handler():
 
             return base64.b64encode(outputBytes)
         except Exception as e:
-            return "Invalid data format", 400
+            return "Exception: " + str(e), 400
+    else:
+        return "Unsupported request method", 405
+    
+@app.route("/speech_to_text", methods=['POST'])
+def speech_to_text_handler():
+    if request.method == 'POST':
+        try:
+            data = request.json
+
+            b64_encoded = data.get('b64_encoded', '')
+            inputBytes = base64.b64decode(b64_encoded)
+
+            return speech_to_text_whisper_gpu(inputBytes)
+        except Exception as e:
+            return "Exception: " + str(e), 400
     else:
         return "Unsupported request method", 405
 

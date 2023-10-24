@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -33,7 +34,8 @@ var upgrader = websocket.Upgrader{
 
 type VfContext struct {
 	// use this delegate to send VfResponse to client single or multiple times.
-	sendResp func(vfResponse *virtualfriends_go.VfResponse) error
+	sendResp          func(vfResponse *virtualfriends_go.VfResponse) error
+	originalVfRequest *virtualfriends_go.VfRequest
 
 	clients *common.Clients
 }
@@ -93,15 +95,27 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		vfContext.originalVfRequest = vfRequest
+
+		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer handlingCancel()
+
 		switch vfRequest.Request.(type) {
 		case *virtualfriends_go.VfRequest_Echo:
-			logger.Errorf("not supported for now")
+			err = fmt.Errorf("not supported for now")
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
 
 		case *virtualfriends_go.VfRequest_StreamReplyMessage:
+			request := vfRequest.Request.(*virtualfriends_go.VfRequest_StreamReplyMessage).StreamReplyMessage
+			HandleStreamReplyMessage(handlingCtx, vfContext, request)
 
 		case *virtualfriends_go.VfRequest_DownloadAssetBundle:
-			logger.Errorf("deprecated")
+			err = fmt.Errorf("deprecated")
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
 
 		case *virtualfriends_go.VfRequest_DownloadBlob:
 			request := vfRequest.Request.(*virtualfriends_go.VfRequest_DownloadBlob).DownloadBlob
@@ -111,6 +125,7 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			request := vfRequest.Request.(*virtualfriends_go.VfRequest_GetCharacter).GetCharacter
 			HandleGetCharacter(handlingCtx, vfContext, request)
 		}
-		handlingCancel()
+
+		vfContext.originalVfRequest = nil
 	}
 }

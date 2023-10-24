@@ -3,22 +3,14 @@ package foundation
 import (
 	"log"
 	"os"
-	"sync"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-const (
-	labelFoundation = "foundation"
-)
-
 var (
 	// globalLogger is global zap logger.
 	globalLogger Logging = NewQuietLogger("info")
-
-	// loggerOnceInit guarantees initialize logger only once.
-	loggerOnceInit sync.Once
 )
 
 type Logging interface {

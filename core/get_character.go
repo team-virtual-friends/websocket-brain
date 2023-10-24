@@ -76,7 +76,7 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 
 		response.VoiceConfig = &virtualfriends_go.VoiceConfig{
 			VoiceType: virtualfriends_go.VoiceType_VoiceType_NormalFemale2,
-			Octaves:   0.2,
+			Octaves:   0.25,
 		}
 		response.Gender = virtualfriends_go.Gender_Gender_Female
 		response.FriendName = "mina"
@@ -109,6 +109,7 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 
 		response.VoiceConfig = &virtualfriends_go.VoiceConfig{
 			VoiceType: virtualfriends_go.VoiceType_VoiceType_NormalMale,
+			Octaves:   -0.2,
 		}
 		response.Gender = virtualfriends_go.Gender_Gender_Male
 		response.FriendName = "einstein"
