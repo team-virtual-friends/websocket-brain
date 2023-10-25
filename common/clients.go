@@ -15,6 +15,7 @@ type Clients struct {
 
 	gcsClient       *GcsClient
 	datastoreClient *DatastoreClient
+	bigqueryClient  *BigQueryClient
 
 	chatGptClient *llm.ChatGptClient
 }
@@ -53,6 +54,15 @@ func InitializeClients(ctx context.Context) error {
 	})
 
 	errGroup.Go(func() error {
+		bigqueryClient, err := NewBigQueryClient(groupCtx)
+		if err != nil {
+			return err
+		}
+		clients.bigqueryClient = bigqueryClient
+		return nil
+	})
+
+	errGroup.Go(func() error {
 		clients.chatGptClient = llm.NewChatGptClient()
 		return nil
 	})
@@ -79,6 +89,10 @@ func (t *Clients) GetGcsClient() *GcsClient {
 
 func (t *Clients) GetDatastoreClient() *DatastoreClient {
 	return t.datastoreClient
+}
+
+func (t *Clients) GetBigQueryClient() *BigQueryClient {
+	return t.bigqueryClient
 }
 
 func (t *Clients) GetChatGptClient() *llm.ChatGptClient {

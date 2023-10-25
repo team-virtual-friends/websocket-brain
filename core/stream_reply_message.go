@@ -2,12 +2,14 @@ package core
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/llm"
+	"github.com/sieglu2/virtual-friends-brain/speech"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
 
@@ -25,8 +27,9 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	var err error
 	switch request.CurrentMessage.(type) {
 	case *virtualfriends_go.StreamReplyMessageRequest_Wav:
+		speechToTextStart := time.Now()
 		wavBytes := request.CurrentMessage.(*virtualfriends_go.StreamReplyMessageRequest_Wav).Wav
-		text, err = speechToText(ctx, wavBytes)
+		text, err = speech.SpeechToText(ctx, wavBytes)
 		if err != nil {
 			err = fmt.Errorf("failed to process speechToText: %v", err)
 			logger.Error(err)
@@ -34,6 +37,20 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 			sendStopReply(ctx, vfContext, request, 1)
 			return
 		}
+		go func() {
+			if foundation.IsProd() {
+				vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+					Env:          foundation.GetEnvironment(),
+					SessionId:    vfContext.originalVfRequest.SessionId,
+					UserId:       vfContext.originalVfRequest.UserId,
+					UserIp:       vfContext.remoteAddr,
+					CharacterId:  request.MirroredContent.CharacterId,
+					LatencyType:  "speech_to_text",
+					LatencyValue: float64(time.Now().Sub(speechToTextStart).Milliseconds()),
+					Timestamp:    time.Now(),
+				})
+			}
+		}()
 		logger.Infof("speechToText result: %s", text)
 
 	case *virtualfriends_go.StreamReplyMessageRequest_Text:
@@ -50,22 +67,6 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	}
 
 	logger.Info("done streaming reply")
-}
-
-func speechToText(ctx context.Context, wavBytes []byte) (string, error) {
-	logger := foundation.Logger()
-
-	encodedData := base64.StdEncoding.EncodeToString(wavBytes)
-	output, err := foundation.AccessLocalFlask(ctx, "speech_to_text", map[string]string{
-		"b64_encoded": encodedData,
-	})
-	if err != nil {
-		err = fmt.Errorf("error calling AccessLocalFlask for speech_to_text: %v", err)
-		logger.Error(err)
-		return "", err
-	}
-
-	return string(output), nil
 }
 
 func llmStreamReply(
@@ -93,9 +94,27 @@ func llmStreamReply(
 	buffer := strings.Builder{}
 	replyIndex := 0
 
-	processStreamText := func(replyText string) error {
+	llmInferStart := time.Now()
+	processStreamText := func(replyText string, index int) error {
 		if len(replyText) == 0 {
 			return nil
+		}
+
+		if index == 0 {
+			go func() {
+				if foundation.IsProd() {
+					vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+						Env:          foundation.GetEnvironment(),
+						SessionId:    vfContext.originalVfRequest.SessionId,
+						UserId:       vfContext.originalVfRequest.UserId,
+						UserIp:       vfContext.remoteAddr,
+						CharacterId:  request.MirroredContent.CharacterId,
+						LatencyType:  "llm_infer",
+						LatencyValue: float64(time.Now().Sub(llmInferStart).Milliseconds()),
+						Timestamp:    time.Now(),
+					})
+				}
+			}()
 		}
 
 		buffer.WriteString(replyText)

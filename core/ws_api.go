@@ -37,7 +37,8 @@ type VfContext struct {
 	sendResp          func(vfResponse *virtualfriends_go.VfResponse) error
 	originalVfRequest *virtualfriends_go.VfRequest
 
-	clients *common.Clients
+	remoteAddr string
+	clients    *common.Clients
 }
 
 func FromError(err error) *virtualfriends_go.VfResponse {
@@ -61,7 +62,8 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 			return conn.WriteMessage(websocket.BinaryMessage, vfResponseBytes)
 		},
 
-		clients: common.GetGlobalClients(),
+		remoteAddr: conn.RemoteAddr().String(),
+		clients:    common.GetGlobalClients(),
 	}
 }
 

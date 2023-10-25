@@ -30,7 +30,7 @@ type CharacterInfo struct {
 }
 
 func NewDatastoreClient(ctx context.Context) (*DatastoreClient, error) {
-	client, err := datastore.NewClient(ctx, "ysong-chat")
+	client, err := datastore.NewClient(ctx, GcpProjectId)
 	if err != nil {
 		return nil, err
 	}

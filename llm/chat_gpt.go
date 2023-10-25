@@ -44,7 +44,7 @@ func NewChatGptClient() *ChatGptClient {
 
 func (t *ChatGptClient) StreamReplyMessage(
 	ctx context.Context, jsonMessages []string,
-	process func(replyText string) error,
+	process func(replyText string, index int) error,
 	completion func() error,
 ) error {
 	logger := foundation.Logger()
@@ -78,6 +78,7 @@ func (t *ChatGptClient) StreamReplyMessage(
 	}
 	defer stream.Close()
 
+	index := 0
 	for {
 		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
@@ -100,11 +101,12 @@ func (t *ChatGptClient) StreamReplyMessage(
 		replyText := response.Choices[0].Delta.Content
 		// logger.Infof("receiving stream reply from gpt: %s", replyText)
 
-		if err = process(replyText); err != nil {
+		if err = process(replyText, index); err != nil {
 			err = fmt.Errorf("gpt reply stream process error: %v", err)
 			logger.Error(err)
 			return err
 		}
+		index += 1
 	}
 
 	return nil
