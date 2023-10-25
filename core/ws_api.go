@@ -73,7 +73,9 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 func OnDisconnect(vfContext *VfContext) {
 	logger := foundation.Logger()
 
-	go logChatHistory(vfContext)
+	if foundation.IsProd() {
+		go logChatHistory(vfContext)
+	}
 	logger.Infof("disconnected.")
 }
 
