@@ -178,6 +178,7 @@ func logChatHistory(vfContext *VfContext) error {
 			return err
 		}
 	}
+	logger.Info("done writing the chat history")
 	return nil
 }
 

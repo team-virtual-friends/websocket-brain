@@ -178,9 +178,6 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 			fmt.Sprintf("Act as %s", response.FriendName),
 		}, "\n")
 
-		// log response before setting the voiceBytes.
-		logger.Infof("response: %+v", response)
-
 		voiceBytes, err := GenerateVoice(ctx, vfContext, response.Greeting, response.VoiceConfig)
 		if err != nil {
 			err = fmt.Errorf("failed to GenerateVoice: %v", err)

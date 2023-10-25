@@ -19,7 +19,7 @@ if env == 'PROD' or env == 'STAGING':
     faster_whisper_model = WhisperModel("large-v2", device="cuda", compute_type="float16")
 else:
     # for local testing, use cpu.
-    faster_whisper_model = WhisperModel("large-v2", device="cpu", compute_type="int8")
+    faster_whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
 
 # for speech_to_text_whisper_gpu specifically.
 class NamedBytesIO(io.BytesIO):
@@ -99,4 +99,4 @@ if __name__ == '__main__':
         from waitress import serve
         serve(app, host='0.0.0.0', port=int(os.environ.get('PORT', 8107)))
     else:
-        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8511)))
+        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8085)))
