@@ -16,10 +16,10 @@ app = Flask(__name__)
 env = os.environ.get('ENV', 'LOCAL')
 if env == 'PROD' or env == 'STAGING':
     # Initialize the Whisper ASR model
-    faster_whisper_model = WhisperModel("base", device="cuda", compute_type="float16")
+    faster_whisper_model = WhisperModel("large-v2", device="cuda", compute_type="float16")
 else:
     # for local testing, use cpu.
-    faster_whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+    faster_whisper_model = WhisperModel("large-v2", device="cpu", compute_type="int8")
 
 # for speech_to_text_whisper_gpu specifically.
 class NamedBytesIO(io.BytesIO):

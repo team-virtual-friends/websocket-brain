@@ -14,6 +14,8 @@ import (
 const (
 	splitChars       = ".;!?:,。；！？：，"
 	replyTextOnError = "sorry I'm having some troubles, can you try say it again? [no_action] <neutral>"
+
+	noMedicalQuestions = "Do not answer any medical related questions.\n"
 )
 
 func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request *virtualfriends_go.StreamReplyMessageRequest) {
@@ -79,8 +81,10 @@ func llmStreamReply(
 		basePrompts += llm.InferSentimentAndActionPrompt
 	}
 
+	basePrompts = noMedicalQuestions + basePrompts
 	basePrompts = strings.ReplaceAll(basePrompts, "\r", "")
 	basePrompts = strings.ReplaceAll(basePrompts, "\n", "\\n")
+
 	firstJson := fmt.Sprintf(`{"role":"system","content":"%s"}`, basePrompts)
 	lastJson := fmt.Sprintf(`{"role":"user","content":"%s"}`, currentMessage)
 	chronicalJsons = append([]string{firstJson}, chronicalJsons...)
