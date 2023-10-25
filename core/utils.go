@@ -2,12 +2,21 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
+	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/speech"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
+
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
 
 func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voiceConfig *virtualfriends_go.VoiceConfig) ([]byte, error) {
 	logger := foundation.Logger()
@@ -52,4 +61,95 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 		return nil, err
 	}
 	return wavBytes, nil
+}
+
+func logChatHistory(vfContext *VfContext) error {
+	logger := foundation.Logger()
+
+	vfRequest := vfContext.originalVfRequest
+	if vfRequest == nil {
+		logger.Warnf("nil vfRequest in vfContext")
+		return nil
+	}
+	request := vfRequest.Request
+
+	var characterId, chatHistory string
+	switch request.(type) {
+	case *virtualfriends_go.VfRequest_StreamReplyMessage:
+		streamReplyMessageRequest := request.(*virtualfriends_go.VfRequest_StreamReplyMessage).StreamReplyMessage
+		characterId = streamReplyMessageRequest.MirroredContent.CharacterId
+		jsonMessages := streamReplyMessageRequest.JsonMessages
+		chatHistory = assembleChatHistory(jsonMessages)
+	}
+
+	if len(chatHistory) > 0 {
+		bqClient := vfContext.clients.GetBigQueryClient()
+		err := bqClient.WriteChatHistory(&common.ChatHistory{
+			UserId:        vfRequest.UserId,
+			UserIp:        vfContext.remoteAddr,
+			CharacterId:   characterId,
+			ChatHistory:   chatHistory,
+			Timestamp:     time.Now(),
+			ChatSessionId: vfContext.originalVfRequest.SessionId,
+			RuntimeEnv:    vfContext.originalVfRequest.RuntimeEnv.String(),
+		})
+		if err != nil {
+			err = fmt.Errorf("failed to WriteChatHistory: %v", err)
+			logger.Error(err)
+			return err
+		}
+	}
+	logger.Info("done writing the chat history")
+	return nil
+}
+
+func assembleChatHistory(jsonMessages []string) string {
+	resultBuilder := strings.Builder{}
+
+	currentRole := ""
+	combinedContent := strings.Builder{}
+	for _, jsonMessage := range jsonMessages {
+		if len(jsonMessage) == 0 {
+			continue
+		}
+
+		var message ChatMessage
+		err := json.Unmarshal([]byte(jsonMessage), &message)
+		if err != nil {
+			resultBuilder.WriteString("---<missing>---")
+			continue
+		}
+
+		if len(currentRole) > 0 && currentRole != message.Role {
+			if currentRole == "assistant" {
+				resultBuilder.WriteString("A")
+			} else {
+				resultBuilder.WriteString(currentRole)
+			}
+
+			resultBuilder.WriteString(": ")
+			resultBuilder.WriteString(strings.Trim(combinedContent.String(), " "))
+			combinedContent.Reset()
+		}
+		separater := ""
+		if combinedContent.Len() > 0 {
+			separater = ". "
+		}
+		combinedContent.WriteString(separater)
+		combinedContent.WriteString(message.Content)
+		currentRole = message.Role
+	}
+
+	if combinedContent.Len() > 0 {
+		if currentRole == "assistant" {
+			resultBuilder.WriteString("A")
+		} else {
+			resultBuilder.WriteString(currentRole)
+		}
+
+		resultBuilder.WriteString(": ")
+		resultBuilder.WriteString(combinedContent.String())
+	}
+
+	return resultBuilder.String()
 }
