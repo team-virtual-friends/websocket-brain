@@ -16,7 +16,7 @@ COPY . ./
 RUN pip3 install -r requirements.txt
 
 # Expose the required ports
-EXPOSE 8080
+EXPOSE 8085
 EXPOSE $PORT
 
 # Set environment variables for logging and environment stage

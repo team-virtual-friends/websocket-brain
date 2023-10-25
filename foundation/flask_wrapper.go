@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	baseUrl = "http://localhost:8511/"
+	baseUrl = "http://localhost:8085/"
 )
 
 func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[string]string) (string, error) {

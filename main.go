@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -13,9 +14,16 @@ import (
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 )
 
-var addr = flag.String("addr", "127.0.0.1:8510", "Virtual Friends Brain")
-
 var upgrader = websocket.Upgrader{} // use default options
+
+func home(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("virtual friends brain"))
+}
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	logger := foundation.Logger()
@@ -65,9 +73,18 @@ func main() {
 
 	initCancel()
 
+	http.HandleFunc("/", home)
+	http.HandleFunc("/health-check", healthCheck)
 	http.HandleFunc("/echo", echo)
 	http.HandleFunc("/in-game", core.InGame)
 
-	logger.Infof("starting server at %s", *addr)
-	logger.Fatal(http.ListenAndServe(*addr, nil))
+	port := os.Getenv("PORT")
+	if len(port) == 0 {
+		port = "8510"
+	}
+
+	addr := fmt.Sprintf(":%s", port)
+
+	logger.Infof("starting server at %s", addr)
+	logger.Fatal(http.ListenAndServe(addr, nil))
 }
