@@ -111,9 +111,8 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 
 		switch vfRequest.Request.(type) {
 		case *virtualfriends_go.VfRequest_Echo:
-			err = fmt.Errorf("not supported for now")
-			logger.Error(err)
-			vfContext.sendResp(FromError(err))
+			request := vfRequest.Request.(*virtualfriends_go.VfRequest_Echo).Echo
+			HandleEcho(handlingCtx, vfContext, request)
 			return
 
 		case *virtualfriends_go.VfRequest_StreamReplyMessage:
