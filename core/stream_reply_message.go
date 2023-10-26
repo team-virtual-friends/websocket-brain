@@ -41,6 +41,9 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 			sendStopReply(ctx, vfContext, request, 1)
 			return
 		}
+
+		latencyInMs := float64(time.Now().Sub(speechToTextStart).Milliseconds())
+		logger.Infof("speech_to_text.stream latency: %f ms", latencyInMs)
 		go func() {
 			if foundation.IsProd() {
 				vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
@@ -50,7 +53,7 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 					UserIp:       vfContext.remoteAddr,
 					CharacterId:  request.MirroredContent.CharacterId,
 					LatencyType:  "speech_to_text.stream",
-					LatencyValue: float64(time.Now().Sub(speechToTextStart).Milliseconds()),
+					LatencyValue: latencyInMs,
 					Timestamp:    time.Now(),
 				})
 			}
@@ -105,6 +108,8 @@ func llmStreamReply(
 		}
 
 		if index == 0 {
+			latencyInMs := float64(time.Now().Sub(llmInferStart).Milliseconds())
+			logger.Infof("llm_infer latency: %f ms", latencyInMs)
 			go func() {
 				if foundation.IsProd() {
 					vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
@@ -114,7 +119,7 @@ func llmStreamReply(
 						UserIp:       vfContext.remoteAddr,
 						CharacterId:  request.MirroredContent.CharacterId,
 						LatencyType:  "llm_infer",
-						LatencyValue: float64(time.Now().Sub(llmInferStart).Milliseconds()),
+						LatencyValue: latencyInMs,
 						Timestamp:    time.Now(),
 					})
 				}
