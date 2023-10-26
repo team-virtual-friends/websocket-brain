@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -42,6 +43,8 @@ type VfContext struct {
 
 	remoteAddr string
 	clients    *common.Clients
+
+	accumulatedMessage strings.Builder
 }
 
 func FromError(err error) *virtualfriends_go.VfResponse {
@@ -132,6 +135,10 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 		case *virtualfriends_go.VfRequest_GetCharacter:
 			request := vfRequest.Request.(*virtualfriends_go.VfRequest_GetCharacter).GetCharacter
 			HandleGetCharacter(handlingCtx, vfContext, request)
+
+		case *virtualfriends_go.VfRequest_AccumulateVoiceMessage:
+			request := vfRequest.Request.(*virtualfriends_go.VfRequest_AccumulateVoiceMessage).AccumulateVoiceMessage
+			HandleAccumulateVoiceMessage(handlingCtx, vfContext, request)
 		}
 	}
 }

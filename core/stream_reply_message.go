@@ -26,12 +26,16 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	text := ""
 	var err error
 	switch request.CurrentMessage.(type) {
+	case *virtualfriends_go.StreamReplyMessageRequest_UseAccumulated:
+		text = vfContext.accumulatedMessage.String()
+		vfContext.accumulatedMessage.Reset()
+
 	case *virtualfriends_go.StreamReplyMessageRequest_Wav:
 		speechToTextStart := time.Now()
 		wavBytes := request.CurrentMessage.(*virtualfriends_go.StreamReplyMessageRequest_Wav).Wav
 		text, err = speech.SpeechToText(ctx, wavBytes)
 		if err != nil {
-			err = fmt.Errorf("failed to process speechToText: %v", err)
+			err = fmt.Errorf("failed to process speechToText in HandleStreamReplyMessage: %v", err)
 			logger.Error(err)
 			sendReply(ctx, vfContext, request, text, replyTextOnError, 0, false)
 			sendStopReply(ctx, vfContext, request, 1)
@@ -45,7 +49,7 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 					UserId:       vfContext.originalVfRequest.UserId,
 					UserIp:       vfContext.remoteAddr,
 					CharacterId:  request.MirroredContent.CharacterId,
-					LatencyType:  "speech_to_text",
+					LatencyType:  "speech_to_text.stream",
 					LatencyValue: float64(time.Now().Sub(speechToTextStart).Milliseconds()),
 					Timestamp:    time.Now(),
 				})
@@ -179,34 +183,38 @@ func sendReply(
 		IsStop:          isStop,
 	}
 
-	if len(rawReplyText) > 0 {
-		reply, action, sentiment := llm.ExtractActionAndSentiment(rawReplyText)
-		logger.Infof("reply: %s, action: %s, sentiment: %s", reply, action, sentiment)
+	if !isStop {
+		if len(rawReplyText) > 0 {
+			reply, action, sentiment := llm.ExtractActionAndSentiment(rawReplyText)
+			logger.Infof("reply: %s, action: %s, sentiment: %s", reply, action, sentiment)
 
-		response.ReplyMessage = reply
-		if replyIndex == 0 {
-			response.TranscribedText = currentMessage
+			if len(reply) > 0 {
+				response.ReplyMessage = reply
+				if replyIndex == 0 {
+					response.TranscribedText = currentMessage
+				}
+
+				replyWav, err := GenerateVoice(ctx, vfContext, reply, request.VoiceConfig)
+				if err != nil {
+					err = fmt.Errorf("failed to generate voice: %v", err)
+					logger.Error(err)
+					// let it go through even if we failed to generate the voice.
+				}
+				response.ReplyWav = replyWav
+			}
+
+			response.Action = action
+			response.Sentiment = sentiment
 		}
-
-		replyWav, err := GenerateVoice(ctx, vfContext, reply, request.VoiceConfig)
-		if err != nil {
-			err = fmt.Errorf("failed to generate voice: %v", err)
-			logger.Error(err)
-			// let it go through even if we failed to generate the voice.
-		}
-		response.ReplyWav = replyWav
-
-		response.Action = action
-		response.Sentiment = sentiment
 	}
 
-	vfResponse := virtualfriends_go.VfResponse{
+	vfResponse := &virtualfriends_go.VfResponse{
 		Response: &virtualfriends_go.VfResponse_StreamReplyMessage{
 			StreamReplyMessage: response,
 		},
 	}
 
-	_ = vfContext.sendResp(&vfResponse)
+	_ = vfContext.sendResp(vfResponse)
 
 	return nil
 }

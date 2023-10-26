@@ -82,13 +82,6 @@ func (t *ChatGptClient) StreamReplyMessage(
 	for {
 		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			logger.Info("gpt reply stream finished")
-			if err = completion(); err != nil {
-				err = fmt.Errorf("gpt reply completion error: %v", err)
-				logger.Error(err)
-				return err
-			}
-
 			break
 		}
 
@@ -107,6 +100,13 @@ func (t *ChatGptClient) StreamReplyMessage(
 			return err
 		}
 		index += 1
+	}
+
+	logger.Info("gpt reply stream finished")
+	if err = completion(); err != nil {
+		err = fmt.Errorf("gpt reply completion error: %v", err)
+		logger.Error(err)
+		return err
 	}
 
 	return nil

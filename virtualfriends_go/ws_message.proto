@@ -17,7 +17,7 @@ enum RuntimeEnv {
     RuntimeEnv_Android = 4;
 }
 
-// Next tag: 15
+// Next tag: 16
 message VfRequest {
     reserved 1;
 
@@ -31,6 +31,8 @@ message VfRequest {
         DownloadBlobRequest download_blob = 9;
 
         GetCharacterRequest get_character = 13;
+
+        AccumulateVoiceMessageRequest accumulate_voice_message = 15;
     }
 
     string ip_addr = 8;
@@ -44,7 +46,7 @@ message VfRequest {
     RuntimeEnv runtime_env = 14;
 }
 
-// Next tag: 10
+// Next tag: 11
 message VfResponse {
     CustomError error = 1;
 
@@ -58,6 +60,8 @@ message VfResponse {
         DownloadBlobResponse download_blob = 8;
 
         GetCharacterResponse get_character = 9;
+
+        AccumulateVoiceMessageResponse accumulate_voice_message = 10;
     }
 }
 
@@ -126,7 +130,7 @@ message MirroredContent {
     string viewer_user_id = 4;
 }
 
-// Next tag: 10
+// Next tag: 11
 message StreamReplyMessageRequest {
     MirroredContent mirrored_content = 1;
     
@@ -145,6 +149,9 @@ message StreamReplyMessageRequest {
         bytes wav = 3;
 
         string text = 6;
+
+        // use the accumulated message from the previous AccumulateVoiceMessageRequests.
+        bool use_accumulated = 10;
     }
 
     VoiceConfig voice_config = 5; 
@@ -263,4 +270,19 @@ message GetCharacterResponse {
     string description = 7;
 
     string base_prompts = 8;
+}
+
+// AccumulateVoiceMessage sends the short-stop wav messages so we can
+// start processing speect_to_text before recording is fully stopped.
+// Next tag: 3
+message AccumulateVoiceMessageRequest {
+    bytes voice_wav = 1;
+
+    // should we send a response indicating the receipt of the message.
+    bool inform_receipt = 2;
+}
+
+// Next tag: 2
+message AccumulateVoiceMessageResponse {
+    string transcribed_text = 1;
 }
