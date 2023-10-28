@@ -14,12 +14,14 @@ spec:
     spec:
       containers:
       - name: virtual-friends-app
-        image: gcr.io/ysong-chat/brain-go:3699d29-e5485814
+        image: gcr.io/ysong-chat/brain-go:3db43a4-188ddfa1
         ports:
         - containerPort: 8080
         env:
           - name: PORT
             value: "8080"
+          - name: FLASK_PORT
+            value: "8085"
           - name: ENV_STR
             value: "prod"
         resources:
@@ -32,7 +34,7 @@ spec:
             cpu: "2"
             ephemeral-storage: "4Gi"
       - name: virtual-friend-py-sidecar
-        image: gcr.io/ysong-chat/brain-py-sidecar:3699d29-b4488249
+        image: gcr.io/ysong-chat/brain-py-sidecar:3db43a4-002c15d1
         ports:
         - containerPort: 8085
         env:

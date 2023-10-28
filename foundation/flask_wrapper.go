@@ -6,17 +6,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 )
 
 const (
-	baseUrl = "http://localhost:8085/"
+	baseUrl = "http://localhost:%s/%s"
+)
+
+var (
+	flaskPortOnce   = sync.Once{}
+	flaskPortString = ""
 )
 
 func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[string]string) (string, error) {
 	logger := Logger()
 
-	url := baseUrl + endpoint
+	url := fmt.Sprintf(baseUrl, getFlaskPortString(), endpoint)
+	logger.Infof("flask url: %s", url)
 	paramsBuilder := strings.Builder{}
 
 	paramsBuilder.WriteString("{")
@@ -70,4 +78,14 @@ func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[strin
 	}
 
 	return string(output), nil
+}
+
+func getFlaskPortString() string {
+	flaskPortOnce.Do(func() {
+		flaskPortString = os.Getenv("FLASK_PORT")
+		if len(flaskPortString) == 0 {
+			flaskPortString = "8085"
+		}
+	})
+	return flaskPortString
 }

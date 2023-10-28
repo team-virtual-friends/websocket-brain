@@ -20,12 +20,17 @@ const (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
+		logger := foundation.Logger()
+
 		origins := r.Header["Origin"]
 		if len(origins) == 0 {
+			logger.Errorf("no origin given")
 			return false
 		}
+		logger.Infof("origins from header: %v", origins)
 		for _, origin := range origins {
-			if origin == VirtualFriendsOrigin {
+			trimmed := strings.Trim(origin, " ")
+			if trimmed == VirtualFriendsOrigin || strings.HasPrefix(trimmed, "http://localhost:") {
 				return true
 			}
 		}
