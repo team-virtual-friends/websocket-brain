@@ -11,19 +11,41 @@ import (
 	"sync"
 )
 
-const (
-	baseUrl = "http://localhost:%s/%s"
-)
+type LocalFlaskClient struct {
+	httpClient *http.Client
+
+	flaskBaseUrl string
+}
 
 var (
-	flaskPortOnce   = sync.Once{}
-	flaskPortString = ""
+	flaskInitOnce = sync.Once{}
+
+	localFlaskClient *LocalFlaskClient
 )
+
+func init() {
+	flaskPortString := os.Getenv("FLASK_PORT")
+	if len(flaskPortString) == 0 {
+		flaskPortString = "8085"
+	}
+	localFlaskClient = &LocalFlaskClient{
+		httpClient:   &http.Client{},
+		flaskBaseUrl: "http://localhost:" + flaskPortString,
+	}
+}
+
+func (t *LocalFlaskClient) getUrl(endpoint string) string {
+	return t.flaskBaseUrl + "/" + endpoint
+}
+
+func (t *LocalFlaskClient) getHttpClient() *http.Client {
+	return t.httpClient
+}
 
 func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[string]string) (string, error) {
 	logger := Logger()
 
-	url := fmt.Sprintf(baseUrl, getFlaskPortString(), endpoint)
+	url := localFlaskClient.getUrl(endpoint)
 	logger.Infof("flask url: %s", url)
 	paramsBuilder := strings.Builder{}
 
@@ -51,11 +73,8 @@ func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[strin
 	// Set the content type for the request
 	req.Header.Set("Content-Type", "application/json")
 
-	// Create an HTTP client
-	client := &http.Client{}
-
 	// Perform the POST request
-	resp, err := client.Do(req)
+	resp, err := localFlaskClient.getHttpClient().Do(req)
 	if err != nil {
 		err = fmt.Errorf("error sending request: %v", err)
 		logger.Error(err)
@@ -78,14 +97,4 @@ func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[strin
 	}
 
 	return string(output), nil
-}
-
-func getFlaskPortString() string {
-	flaskPortOnce.Do(func() {
-		flaskPortString = os.Getenv("FLASK_PORT")
-		if len(flaskPortString) == 0 {
-			flaskPortString = "8085"
-		}
-	})
-	return flaskPortString
 }
