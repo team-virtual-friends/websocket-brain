@@ -82,7 +82,8 @@ func OnDisconnect(vfContext *VfContext) {
 	logger := foundation.Logger()
 
 	if foundation.IsProd() {
-		go logChatHistory(vfContext)
+		disconnectTime := time.Now()
+		go logChatHistory(vfContext, disconnectTime)
 	}
 	logger.Infof("disconnected.")
 }

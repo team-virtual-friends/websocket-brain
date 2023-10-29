@@ -24,7 +24,8 @@ func HandleAccumulateVoiceMessage(ctx context.Context, vfContext *VfContext, req
 		return
 	}
 
-	latencyInMs := float64(time.Now().Sub(speechToTextStart).Milliseconds())
+	speechToTextEnd := time.Now()
+	latencyInMs := float64(speechToTextEnd.Sub(speechToTextStart).Milliseconds())
 	logger.Infof("speech_to_text.accu latency: %f ms", latencyInMs)
 	go func() {
 		if foundation.IsProd() {
@@ -36,7 +37,7 @@ func HandleAccumulateVoiceMessage(ctx context.Context, vfContext *VfContext, req
 				CharacterId:  "<accu>",
 				LatencyType:  "speech_to_text.accu",
 				LatencyValue: latencyInMs,
-				Timestamp:    time.Now(),
+				Timestamp:    speechToTextEnd,
 			})
 		}
 	}()

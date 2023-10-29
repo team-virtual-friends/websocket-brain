@@ -42,7 +42,8 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 			return
 		}
 
-		latencyInMs := float64(time.Now().Sub(speechToTextStart).Milliseconds())
+		speechToTextEnd := time.Now()
+		latencyInMs := float64(speechToTextEnd.Sub(speechToTextStart).Milliseconds())
 		logger.Infof("speech_to_text.stream latency: %f ms", latencyInMs)
 		go func() {
 			if foundation.IsProd() {
@@ -54,7 +55,7 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 					CharacterId:  request.MirroredContent.CharacterId,
 					LatencyType:  "speech_to_text.stream",
 					LatencyValue: latencyInMs,
-					Timestamp:    time.Now(),
+					Timestamp:    speechToTextEnd,
 				})
 			}
 		}()
@@ -108,7 +109,8 @@ func llmStreamReply(
 		}
 
 		if index == 0 {
-			latencyInMs := float64(time.Now().Sub(llmInferStart).Milliseconds())
+			llmInferEnd := time.Now()
+			latencyInMs := float64(llmInferEnd.Sub(llmInferStart).Milliseconds())
 			logger.Infof("llm_infer latency: %f ms", latencyInMs)
 			go func() {
 				if foundation.IsProd() {
@@ -120,7 +122,7 @@ func llmStreamReply(
 						CharacterId:  request.MirroredContent.CharacterId,
 						LatencyType:  "llm_infer",
 						LatencyValue: latencyInMs,
-						Timestamp:    time.Now(),
+						Timestamp:    llmInferEnd,
 					})
 				}
 			}()

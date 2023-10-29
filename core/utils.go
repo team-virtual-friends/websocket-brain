@@ -63,7 +63,7 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	return wavBytes, nil
 }
 
-func logChatHistory(vfContext *VfContext) error {
+func logChatHistory(vfContext *VfContext, eventTime time.Time) error {
 	logger := foundation.Logger()
 
 	vfRequest := vfContext.originalVfRequest
