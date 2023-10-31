@@ -46,21 +46,26 @@ func (t *GcsClient) DownloadBlob(ctx context.Context, bucketName, path string) (
 func (t *GcsClient) ExtendCharacterInfo(ctx context.Context, character *CharacterInfo) error {
 	logger := foundation.Logger()
 
-	description, err := t.fetchCharacterInfo(ctx, character.CharacterId, "character_description", character.DescriptionGcsId)
-	if err != nil {
-		err = fmt.Errorf("failed to fetch description from gcs: %v", err)
-		logger.Error(err)
-		return err
+	if len(character.DescriptionGcsId) > 0 {
+		description, err := t.fetchCharacterInfo(ctx, character.CharacterId, "character_description", character.DescriptionGcsId)
+		if err != nil {
+			err = fmt.Errorf("failed to fetch description from gcs: %v", err)
+			logger.Error(err)
+			return err
+		}
+		character.Description = description
 	}
-	character.Description = description
 
-	prompts, err := t.fetchCharacterInfo(ctx, character.CharacterId, "character_prompts", character.PromptsGcsId)
-	if err != nil {
-		err = fmt.Errorf("failed to fetch prompts from gcs: %v", err)
-		logger.Error(err)
-		return err
+	if len(character.PromptsGcsId) > 0 {
+		prompts, err := t.fetchCharacterInfo(ctx, character.CharacterId, "character_prompts", character.PromptsGcsId)
+		logger.Errorf("character.PromptsGcsId: " + character.PromptsGcsId)
+		if err != nil {
+			err = fmt.Errorf("failed to fetch prompts from gcs: %v", err)
+			logger.Error(err)
+			return err
+		}
+		character.Prompts = prompts
 	}
-	character.Prompts = prompts
 
 	return nil
 }
