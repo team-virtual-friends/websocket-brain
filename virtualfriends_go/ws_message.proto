@@ -134,6 +134,7 @@ message MirroredContent {
 message StreamReplyMessageRequest {
     MirroredContent mirrored_content = 1;
     
+    // chat history messages in json format.
     repeated string json_messages = 2;
 
     // base_prompts is the prompts that is created by the owner, stored in the DB, and passed to client

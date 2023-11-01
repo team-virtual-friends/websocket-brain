@@ -65,13 +65,10 @@ func (t BigQueryClient) writeData(ctx context.Context, datasetId, tableId string
 	return nil
 }
 
-func (t *BigQueryClient) WriteLatencyStats(latencyStats *LatencyStats) error {
+func (t *BigQueryClient) WriteLatencyStats(ctx context.Context, latencyStats *LatencyStats) error {
 	logger := foundation.Logger()
 
-	ctx, cancel := context.WithTimeout(context.Background(), bigqueryWriteTimeout)
 	err := t.writeData(ctx, datasetIdVirtualFriends, "latency_log", []*LatencyStats{latencyStats})
-	cancel()
-
 	if err != nil {
 		err = fmt.Errorf("failed to writeData for LatencyStats: %v", err)
 		logger.Error(err)
@@ -81,13 +78,10 @@ func (t *BigQueryClient) WriteLatencyStats(latencyStats *LatencyStats) error {
 	return nil
 }
 
-func (t *BigQueryClient) WriteChatHistory(chatHistory *ChatHistory) error {
+func (t *BigQueryClient) WriteChatHistory(ctx context.Context, chatHistory *ChatHistory) error {
 	logger := foundation.Logger()
 
-	ctx, cancel := context.WithTimeout(context.Background(), bigqueryWriteTimeout)
 	err := t.writeData(ctx, datasetIdVirtualFriends, "chat_history", []*ChatHistory{chatHistory})
-	cancel()
-
 	if err != nil {
 		err = fmt.Errorf("failed to writeData for ChatHistory: %v", err)
 		logger.Error(err)

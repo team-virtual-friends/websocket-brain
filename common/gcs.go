@@ -9,6 +9,14 @@ import (
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 )
 
+const (
+	chatHistoryBucketName = "vf-chat-histories"
+)
+
+var (
+	ObjectNotExistError = storage.ErrObjectNotExist
+)
+
 type GcsClient struct {
 	client *storage.Client
 }
@@ -30,6 +38,9 @@ func (t *GcsClient) DownloadBlob(ctx context.Context, bucketName, path string) (
 	object := bucket.Object(path)
 	reader, err := object.NewReader(ctx)
 	if err != nil {
+		if err == storage.ErrObjectNotExist {
+			return nil, ObjectNotExistError
+		}
 		err = fmt.Errorf("failed to read from gcs for %s: %v", path, err)
 		logger.Error(err)
 		return nil, err
@@ -41,6 +52,51 @@ func (t *GcsClient) DownloadBlob(ctx context.Context, bucketName, path string) (
 		return nil, err
 	}
 	return bytes, nil
+}
+
+func (t *GcsClient) LoadChatHistory(ctx context.Context, toCharacterId, fromCharacterId string) (string, error) {
+	logger := foundation.Logger()
+
+	// using toCharacterId as the first component so we can query who has talked to me.
+	filePath := fmt.Sprintf("%s/%s.txt", toCharacterId, fromCharacterId)
+	bytes, err := t.DownloadBlob(ctx, chatHistoryBucketName, filePath)
+	if err != nil {
+		if err == ObjectNotExistError {
+			logger.Infof("did not find %s, treat it empty", filePath)
+			return "", nil
+		}
+
+		err = fmt.Errorf("failed to DownloadBlob chatHistory for %s: %v", filePath, err)
+		logger.Error(err)
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func (t *GcsClient) SaveChatHistory(ctx context.Context, toCharacterId, fromCharacterId string, completeChatHistory string) error {
+	logger := foundation.Logger()
+
+	// using toCharacterId as the first component so we can query who has talked to me.
+	filePath := fmt.Sprintf("%s/%s.txt", toCharacterId, fromCharacterId)
+
+	bucket := t.client.Bucket(chatHistoryBucketName)
+	obj := bucket.Object(filePath)
+
+	w := obj.NewWriter(ctx)
+	_, err := w.Write([]byte(completeChatHistory))
+	if err != nil {
+		err = fmt.Errorf("failed to write chatHistory to gcs(%s): %v", filePath, err)
+		logger.Error(err)
+		return err
+	}
+	if err := w.Close(); err != nil {
+		err = fmt.Errorf("Failed to close gcs(%s) writer: %v", filePath, err)
+		logger.Error(err)
+		return err
+	}
+
+	return nil
 }
 
 func (t *GcsClient) ExtendCharacterInfo(ctx context.Context, character *CharacterInfo) error {
@@ -84,6 +140,9 @@ func (t *GcsClient) fetchCharacterInfo(ctx context.Context, characterId, attribu
 	object := bucket.Object(path)
 	reader, err := object.NewReader(ctx)
 	if err != nil {
+		if err == storage.ErrObjectNotExist {
+			return "", ObjectNotExistError
+		}
 		err = fmt.Errorf("failed to read from gcs for %s: %v", path, err)
 		logger.Error(err)
 		return "", err

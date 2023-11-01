@@ -63,44 +63,74 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	return wavBytes, nil
 }
 
-func logChatHistory(vfContext *VfContext, eventTime time.Time) error {
+func logChatHistory(vfContext *VfContext, eventTime time.Time) {
 	logger := foundation.Logger()
 
 	vfRequest := vfContext.originalVfRequest
 	if vfRequest == nil {
 		logger.Warnf("nil vfRequest in vfContext")
-		return nil
+		return
 	}
 	request := vfRequest.Request
 
-	var characterId, chatHistory string
+	var characterId string
+	// chatHistory will be "user: say something" format, easy for human to read in bq.
+	var chatHistoryForBq, bulkJsonMessages string
 	switch request.(type) {
 	case *virtualfriends_go.VfRequest_StreamReplyMessage:
 		streamReplyMessageRequest := request.(*virtualfriends_go.VfRequest_StreamReplyMessage).StreamReplyMessage
 		characterId = streamReplyMessageRequest.MirroredContent.CharacterId
 		jsonMessages := streamReplyMessageRequest.JsonMessages
-		chatHistory = assembleChatHistory(jsonMessages)
+		chatHistoryForBq = assembleChatHistory(jsonMessages)
+		bulkJsonMessages = buildBulkJsonMessage(jsonMessages)
 	}
 
-	if len(chatHistory) > 0 {
+	if len(chatHistoryForBq) > 0 {
 		bqClient := vfContext.clients.GetBigQueryClient()
-		err := bqClient.WriteChatHistory(&common.ChatHistory{
-			UserId:        vfRequest.UserId,
-			UserIp:        vfContext.remoteAddr,
-			CharacterId:   characterId,
-			ChatHistory:   chatHistory,
-			Timestamp:     time.Now(),
-			ChatSessionId: vfContext.originalVfRequest.SessionId,
-			RuntimeEnv:    vfContext.originalVfRequest.RuntimeEnv.String(),
-		})
-		if err != nil {
-			err = fmt.Errorf("failed to WriteChatHistory: %v", err)
-			logger.Error(err)
-			return err
-		}
+
+		go func() {
+			bqCtx, bqCtxCancel := context.WithTimeout(context.Background(), time.Second)
+			err := bqClient.WriteChatHistory(bqCtx, &common.ChatHistory{
+				UserId:        vfRequest.UserId,
+				UserIp:        vfContext.remoteAddr,
+				CharacterId:   characterId,
+				ChatHistory:   chatHistoryForBq,
+				Timestamp:     time.Now(),
+				ChatSessionId: vfContext.originalVfRequest.SessionId,
+				RuntimeEnv:    vfContext.originalVfRequest.RuntimeEnv.String(),
+			})
+			bqCtxCancel()
+
+			if err != nil {
+				err = fmt.Errorf("failed to WriteChatHistory to bq: %v", err)
+				logger.Error(err)
+			}
+		}()
+	}
+	if len(bulkJsonMessages) > 0 {
+		gcsClient := vfContext.clients.GetGcsClient()
+
+		go func() {
+			gcsCtx, gcsCtxCancel := context.WithTimeout(context.Background(), time.Second)
+			// TODO(yufan.lu) use vfContext.remoteAddr temporarily, need to change to userId.
+			err := gcsClient.SaveChatHistory(gcsCtx, characterId, vfContext.remoteAddr, bulkJsonMessages)
+			gcsCtxCancel()
+
+			if err != nil {
+				err = fmt.Errorf("failed to SaveChatHistory to gcs: %v", err)
+				logger.Error(err)
+			}
+		}()
 	}
 	logger.Info("done writing the chat history")
-	return nil
+}
+
+func buildBulkJsonMessage(jsonMessages []string) string {
+	noNewLineMessages := make([]string, 0, len(jsonMessages))
+	for _, jsonMessage := range jsonMessages {
+		noNewLineMessages = append(noNewLineMessages, foundation.RemoveNewlines(jsonMessage))
+	}
+	return strings.Join(noNewLineMessages, "\n")
 }
 
 func assembleChatHistory(jsonMessages []string) string {

@@ -1,6 +1,7 @@
 package foundation
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -15,4 +16,9 @@ func TrimPunctuation(s string) string {
 	trimmed := strings.TrimFunc(s, isPunctuation)
 
 	return trimmed
+}
+
+func RemoveNewlines(input string) string {
+	re := regexp.MustCompile(`[\r\n]+`)
+	return re.ReplaceAllString(input, "")
 }
