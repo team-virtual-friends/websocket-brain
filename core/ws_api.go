@@ -16,6 +16,8 @@ import (
 
 const (
 	VirtualFriendsOrigin = "https://virtualfriends.ai"
+	prefixLocalHost      = "http://localhost:"
+	prefix127            = "http://127.0.0.1:"
 )
 
 var upgrader = websocket.Upgrader{
@@ -30,7 +32,10 @@ var upgrader = websocket.Upgrader{
 		logger.Infof("origins from header: %v", origins)
 		for _, origin := range origins {
 			trimmed := strings.Trim(origin, " ")
-			if trimmed == VirtualFriendsOrigin || strings.HasPrefix(trimmed, "http://localhost:") {
+			if trimmed == VirtualFriendsOrigin ||
+				strings.HasPrefix(trimmed, prefixLocalHost) ||
+				strings.HasPrefix(trimmed, prefix127) {
+
 				return true
 			}
 		}
