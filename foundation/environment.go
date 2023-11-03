@@ -10,13 +10,16 @@ var (
 	envOnce sync.Once
 )
 
-func GetEnvironment() string {
+func InitEnvironment() {
 	envOnce.Do(func() {
 		envStr = os.Getenv("ENV_STR")
 		if len(envStr) == 0 {
 			envStr = "local"
 		}
 	})
+}
+
+func GetEnvironment() string {
 	return envStr
 }
 

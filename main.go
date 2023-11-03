@@ -61,6 +61,8 @@ func main() {
 	flag.Parse()
 
 	logger := foundation.Logger()
+	foundation.InitEnvironment()
+	logger.Infof("running environment: %t", foundation.IsProd())
 	initCtx, initCancel := context.WithTimeout(context.Background(), 60*time.Second)
 
 	if err := common.InitializeClients(initCtx); err != nil {
