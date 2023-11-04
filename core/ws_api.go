@@ -88,7 +88,8 @@ func OnDisconnect(vfContext *VfContext) {
 
 	if foundation.IsProd() {
 		disconnectTime := time.Now()
-		go logChatHistory(vfContext, disconnectTime)
+		vfRequestCopy := proto.Clone(vfContext.originalVfRequest).(*virtualfriends_go.VfRequest)
+		go logChatHistory(vfContext, vfRequestCopy, disconnectTime)
 	}
 	logger.Infof("disconnected.")
 }
@@ -116,6 +117,16 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 		if err = proto.Unmarshal(message, vfRequest); err != nil {
 			logger.Errorf("failed to unmarshal: %v", err)
 			break
+		}
+
+		// hacky, beginning of a new session, let's log the chat history.
+		switch vfRequest.Request.(type) {
+		case *virtualfriends_go.VfRequest_GetCharacter:
+			if foundation.IsProd() {
+				disconnectTime := time.Now()
+				vfRequestCopy := proto.Clone(vfContext.originalVfRequest).(*virtualfriends_go.VfRequest)
+				go logChatHistory(vfContext, vfRequestCopy, disconnectTime)
+			}
 		}
 
 		vfContext.originalVfRequest = vfRequest

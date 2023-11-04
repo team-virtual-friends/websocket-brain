@@ -63,14 +63,12 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	return wavBytes, nil
 }
 
-func logChatHistory(vfContext *VfContext, eventTime time.Time) error {
-	logger := foundation.Logger()
-
-	vfRequest := vfContext.originalVfRequest
+func logChatHistory(vfContext *VfContext, vfRequest *virtualfriends_go.VfRequest, eventTime time.Time) error {
 	if vfRequest == nil {
-		logger.Warnf("nil vfRequest in vfContext")
 		return nil
 	}
+
+	logger := foundation.Logger()
 	request := vfRequest.Request
 
 	var characterId, chatHistory string
