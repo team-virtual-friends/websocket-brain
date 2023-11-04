@@ -165,16 +165,16 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		if len(response.FriendName) == 0 {
 			response.FriendName = "Virtual Friends Assistant"
 		}
-		response.Greeting = character.Greeting
+		response.Greeting = strings.ReplaceAll(character.Greeting, "\"", "\\\"")
 		if len(response.Greeting) == 0 {
 			response.Greeting = "hi, I am Virtual Friends Assistant."
 		}
 
-		response.Description = character.Description
+		response.Description = strings.ReplaceAll(character.Description, "\"", "\\\"")
 		response.BasePrompts = strings.Join([]string{
 			fmt.Sprintf("name: %s", response.FriendName),
 			fmt.Sprintf("description: %s", response.Description),
-			character.Prompts,
+			strings.ReplaceAll(character.Prompts, "\"", "\\\""),
 			fmt.Sprintf("Act as %s", response.FriendName),
 		}, "\n")
 
