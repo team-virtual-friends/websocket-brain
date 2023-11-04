@@ -10,8 +10,16 @@ import (
 
 var (
 	// globalLogger is global zap logger.
-	globalLogger Logging = NewQuietLogger("info")
+	globalLogger Logging = NewQuietLogger(getLogLevel())
 )
+
+func getLogLevel() string {
+	levelFromEnv := os.Getenv("LOG_LEVEL")
+	if len(levelFromEnv) == 0 {
+		levelFromEnv = "info"
+	}
+	return levelFromEnv
+}
 
 type Logging interface {
 	With(args ...interface{}) Logging

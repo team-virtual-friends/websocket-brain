@@ -99,6 +99,7 @@ func llmStreamReply(
 	chronicalJsons = append([]string{firstJson}, chronicalJsons...)
 	chronicalJsons = append(chronicalJsons, lastJson)
 
+	vfContext.savedCharacterId = request.MirroredContent.CharacterId
 	vfContext.savedJsonMessages = chronicalJsons[1:]
 
 	buffer := strings.Builder{}

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: virtual-friends-app
-        image: gcr.io/ysong-chat/brain-go:c335434-4d406dc5
+        image: gcr.io/ysong-chat/brain-go:61a684b-3e962209
         ports:
         - containerPort: 8080
         env:
@@ -24,6 +24,8 @@ spec:
             value: "8085"
           - name: ENV_STR
             value: "prod"
+          - name: LOG_LEVEL
+            value: "warn"
         resources:
           requests:
             memory: "1Gi"
