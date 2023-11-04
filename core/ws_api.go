@@ -47,13 +47,21 @@ type VfContext struct {
 	// use this delegate to send VfResponse to client single or multiple times.
 	sendResp func(vfResponse *virtualfriends_go.VfResponse) error
 
-	// the reference to the VfRequest being processed, if it's outside the processing
-	// handler it'll be the last one.
-	originalVfRequest *virtualfriends_go.VfRequest
-
 	remoteAddr string
-	clients    *common.Clients
 
+	// those are updated from VfRequest.
+	userId     string
+	sessionId  string
+	runtimeEnv virtualfriends_go.RuntimeEnv
+
+	// these are updated via HandleStreamReplyMessage.
+	savedCharacterId  string
+	savedJsonMessages []string
+
+	clients *common.Clients
+
+	// for saving the accumulated message transcribed in HandleAccumulateVoiceMessage
+	// and to be used in StreamReply.
 	accumulatedMessage strings.Builder
 }
 
@@ -79,17 +87,25 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 		},
 
 		remoteAddr: conn.RemoteAddr().String(),
-		clients:    common.GetGlobalClients(),
+
+		clients: common.GetGlobalClients(),
 	}
 }
 
 func OnDisconnect(vfContext *VfContext) {
 	logger := foundation.Logger()
 
-	if foundation.IsProd() {
+	if foundation.IsProd() && len(vfContext.savedJsonMessages) > 0 {
 		disconnectTime := time.Now()
-		vfRequestCopy := proto.Clone(vfContext.originalVfRequest).(*virtualfriends_go.VfRequest)
-		go logChatHistory(vfContext, vfRequestCopy, disconnectTime)
+		go logChatHistory(vfContext, &common.ChatHistory{
+			UserId:        vfContext.userId,
+			UserIp:        vfContext.remoteAddr,
+			CharacterId:   vfContext.savedCharacterId,
+			ChatHistory:   assembleChatHistory(vfContext.savedJsonMessages),
+			Timestamp:     disconnectTime,
+			ChatSessionId: vfContext.sessionId,
+			RuntimeEnv:    vfContext.runtimeEnv.String(),
+		}, disconnectTime)
 	}
 	logger.Infof("disconnected.")
 }
@@ -119,17 +135,9 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// hacky, beginning of a new session, let's log the chat history.
-		switch vfRequest.Request.(type) {
-		case *virtualfriends_go.VfRequest_GetCharacter:
-			if foundation.IsProd() {
-				disconnectTime := time.Now()
-				vfRequestCopy := proto.Clone(vfContext.originalVfRequest).(*virtualfriends_go.VfRequest)
-				go logChatHistory(vfContext, vfRequestCopy, disconnectTime)
-			}
-		}
-
-		vfContext.originalVfRequest = vfRequest
+		vfContext.userId = vfRequest.UserId
+		vfContext.sessionId = vfRequest.SessionId
+		vfContext.runtimeEnv = vfRequest.RuntimeEnv
 
 		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer handlingCancel()

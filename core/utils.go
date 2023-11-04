@@ -63,40 +63,19 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	return wavBytes, nil
 }
 
-func logChatHistory(vfContext *VfContext, vfRequest *virtualfriends_go.VfRequest, eventTime time.Time) error {
-	if vfRequest == nil {
-		return nil
-	}
-
+func logChatHistory(vfContext *VfContext, chatHistory *common.ChatHistory, eventTime time.Time) error {
 	logger := foundation.Logger()
-	request := vfRequest.Request
 
-	var characterId, chatHistory string
-	switch request.(type) {
-	case *virtualfriends_go.VfRequest_StreamReplyMessage:
-		streamReplyMessageRequest := request.(*virtualfriends_go.VfRequest_StreamReplyMessage).StreamReplyMessage
-		characterId = streamReplyMessageRequest.MirroredContent.CharacterId
-		jsonMessages := streamReplyMessageRequest.JsonMessages
-		chatHistory = assembleChatHistory(jsonMessages)
+	logger.Infof("logging chat history: %+v", chatHistory)
+
+	bqClient := vfContext.clients.GetBigQueryClient()
+	err := bqClient.WriteChatHistory(chatHistory)
+	if err != nil {
+		err = fmt.Errorf("failed to WriteChatHistory: %v", err)
+		logger.Error(err)
+		return err
 	}
 
-	if len(chatHistory) > 0 {
-		bqClient := vfContext.clients.GetBigQueryClient()
-		err := bqClient.WriteChatHistory(&common.ChatHistory{
-			UserId:        vfRequest.UserId,
-			UserIp:        vfContext.remoteAddr,
-			CharacterId:   characterId,
-			ChatHistory:   chatHistory,
-			Timestamp:     time.Now(),
-			ChatSessionId: vfContext.originalVfRequest.SessionId,
-			RuntimeEnv:    vfContext.originalVfRequest.RuntimeEnv.String(),
-		})
-		if err != nil {
-			err = fmt.Errorf("failed to WriteChatHistory: %v", err)
-			logger.Error(err)
-			return err
-		}
-	}
 	logger.Info("done writing the chat history")
 	return nil
 }
@@ -114,7 +93,7 @@ func assembleChatHistory(jsonMessages []string) string {
 		var message ChatMessage
 		err := json.Unmarshal([]byte(jsonMessage), &message)
 		if err != nil {
-			resultBuilder.WriteString("---<missing>---")
+			resultBuilder.WriteString("---<missing>---\n")
 			continue
 		}
 
@@ -135,6 +114,7 @@ func assembleChatHistory(jsonMessages []string) string {
 		}
 		combinedContent.WriteString(separater)
 		combinedContent.WriteString(message.Content)
+		combinedContent.WriteString("\n")
 		currentRole = message.Role
 	}
 

@@ -49,8 +49,8 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 			if foundation.IsProd() {
 				vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
 					Env:          foundation.GetEnvironment(),
-					SessionId:    vfContext.originalVfRequest.SessionId,
-					UserId:       vfContext.originalVfRequest.UserId,
+					SessionId:    vfContext.sessionId,
+					UserId:       vfContext.userId,
 					UserIp:       vfContext.remoteAddr,
 					CharacterId:  request.MirroredContent.CharacterId,
 					LatencyType:  "speech_to_text.stream",
@@ -99,9 +99,12 @@ func llmStreamReply(
 	chronicalJsons = append([]string{firstJson}, chronicalJsons...)
 	chronicalJsons = append(chronicalJsons, lastJson)
 
+	vfContext.savedJsonMessages = chronicalJsons[1:]
+
 	buffer := strings.Builder{}
 	replyIndex := 0
 
+	completeReply := strings.Builder{}
 	llmInferStart := time.Now()
 	processStreamText := func(replyText string, index int) error {
 		if len(replyText) == 0 {
@@ -116,8 +119,8 @@ func llmStreamReply(
 				if foundation.IsProd() {
 					vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
 						Env:          foundation.GetEnvironment(),
-						SessionId:    vfContext.originalVfRequest.SessionId,
-						UserId:       vfContext.originalVfRequest.UserId,
+						SessionId:    vfContext.sessionId,
+						UserId:       vfContext.userId,
 						UserIp:       vfContext.remoteAddr,
 						CharacterId:  request.MirroredContent.CharacterId,
 						LatencyType:  "llm_infer",
@@ -129,6 +132,7 @@ func llmStreamReply(
 		}
 
 		buffer.WriteString(replyText)
+		completeReply.WriteString(replyText)
 		if strings.Contains(splitChars, string(replyText[len(replyText)-1])) {
 			bufferString := buffer.String()
 			err := sendReply(ctx, vfContext, request, currentMessage, bufferString, replyIndex, false)
@@ -165,6 +169,10 @@ func llmStreamReply(
 		logger.Error(err)
 		return err
 	}
+
+	vfContext.savedJsonMessages = append(
+		vfContext.savedJsonMessages,
+		fmt.Sprintf(`{"role":"assistant","content":"%s"}`, completeReply.String()))
 
 	return nil
 }

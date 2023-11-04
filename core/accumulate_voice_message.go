@@ -31,8 +31,8 @@ func HandleAccumulateVoiceMessage(ctx context.Context, vfContext *VfContext, req
 		if foundation.IsProd() {
 			vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
 				Env:          foundation.GetEnvironment(),
-				SessionId:    vfContext.originalVfRequest.SessionId,
-				UserId:       vfContext.originalVfRequest.UserId,
+				SessionId:    vfContext.sessionId,
+				UserId:       vfContext.userId,
 				UserIp:       vfContext.remoteAddr,
 				CharacterId:  "<accu>",
 				LatencyType:  "speech_to_text.accu",
