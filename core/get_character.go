@@ -16,6 +16,11 @@ var (
 	rpmRegexPattern     = `(?m)^https:\/\/models\.readyplayer\.me\/[0-9a-z]+\.glb$`
 	blobDownloadPrefix  = "vf://blob/"
 	avaturnRegexPattern = `(?m)^https:\/\/api\.avaturn\.me\/avatars\/exports\/[a-z0-9\-]+\/model$`
+
+	specialCharacters = map[string]string{
+		"2bc098d7b8f35d45f86a2f778f5dd89d": "mina",
+		"e75d8532c413d425307ef7d42b5ccd94": "einstein",
+	}
 )
 
 func determineLoader(characterUrl string, response *virtualfriends_go.GetCharacterResponse) error {
@@ -157,6 +162,15 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		case "female":
 			response.Gender = virtualfriends_go.Gender_Gender_Female
 			voiceConfig.VoiceType = virtualfriends_go.VoiceType_VoiceType_NormalFemale2
+		}
+		if val, exist := specialCharacters[request.CharacterId]; exist {
+			switch val {
+			case "mina":
+				voiceConfig.Octaves = 0.18
+
+			case "einstein":
+				voiceConfig.Octaves = -0.2
+			}
 		}
 		voiceConfig.ElevenLabId = character.ElevenLabId
 		response.VoiceConfig = voiceConfig
