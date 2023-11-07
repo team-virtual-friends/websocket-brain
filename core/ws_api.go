@@ -47,12 +47,11 @@ type VfContext struct {
 	// use this delegate to send VfResponse to client single or multiple times.
 	sendResp func(vfResponse *virtualfriends_go.VfResponse) error
 
-	remoteAddr string
-
 	// those are updated from VfRequest.
-	userId     string
-	sessionId  string
-	runtimeEnv virtualfriends_go.RuntimeEnv
+	remoteAddrFromClient string
+	userId               string
+	sessionId            string
+	runtimeEnv           virtualfriends_go.RuntimeEnv
 
 	// these are updated via HandleStreamReplyMessage.
 	savedCharacterId  string
@@ -86,8 +85,6 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 			return conn.WriteMessage(websocket.BinaryMessage, vfResponseBytes)
 		},
 
-		remoteAddr: conn.RemoteAddr().String(),
-
 		clients: common.GetGlobalClients(),
 	}
 }
@@ -99,7 +96,7 @@ func OnDisconnect(vfContext *VfContext) {
 		disconnectTime := time.Now()
 		go logChatHistory(vfContext, &common.ChatHistory{
 			UserId:        vfContext.userId,
-			UserIp:        vfContext.remoteAddr,
+			UserIp:        vfContext.remoteAddrFromClient,
 			CharacterId:   vfContext.savedCharacterId,
 			ChatHistory:   assembleChatHistory(vfContext.savedJsonMessages),
 			Timestamp:     disconnectTime,
@@ -138,6 +135,7 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 		vfContext.userId = vfRequest.UserId
 		vfContext.sessionId = vfRequest.SessionId
 		vfContext.runtimeEnv = vfRequest.RuntimeEnv
+		vfContext.remoteAddrFromClient = vfRequest.IpAddr
 
 		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer handlingCancel()

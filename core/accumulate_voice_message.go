@@ -33,7 +33,7 @@ func HandleAccumulateVoiceMessage(ctx context.Context, vfContext *VfContext, req
 				Env:          foundation.GetEnvironment(),
 				SessionId:    vfContext.sessionId,
 				UserId:       vfContext.userId,
-				UserIp:       vfContext.remoteAddr,
+				UserIp:       vfContext.remoteAddrFromClient,
 				CharacterId:  "<accu>",
 				LatencyType:  "speech_to_text.accu",
 				LatencyValue: latencyInMs,
