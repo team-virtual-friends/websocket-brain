@@ -171,9 +171,13 @@ func llmStreamReply(
 		return err
 	}
 
-	vfContext.savedJsonMessages = append(
-		vfContext.savedJsonMessages,
-		fmt.Sprintf(`{"role":"assistant","content":"%s"}`, completeReply.String()))
+	if completeReply.Len() > 0 {
+		completeReplyStr := completeReply.String()
+		reply, _, _ := llm.ExtractActionAndSentiment(completeReplyStr)
+		vfContext.savedJsonMessages = append(
+			vfContext.savedJsonMessages,
+			fmt.Sprintf(`{"role":"assistant","content":"%s"}`, reply))
+	}
 
 	return nil
 }
