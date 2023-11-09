@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/abadojack/whatlanggo"
+	"github.com/rylans/getlang"
 )
 
 func main() {
-	info := whatlanggo.Detect("Foje funkcias kaj foje ne funkcias")
-	fmt.Println("Language:", info.Lang.String(), " Script:", whatlanggo.Scripts[info.Script], " Confidence: ", info.Confidence)
+	info := getlang.FromString("Wszyscy ludzie rodzą się wolni i równi w swojej godności i prawach")
+	fmt.Println(info.LanguageCode(), info.LanguageName(), info.Confidence())
+	fmt.Printf("%+v\n", info)
 }

@@ -35,13 +35,13 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	var err error
 	switch voiceConfig.VoiceType {
 	case virtualfriends_go.VoiceType_VoiceType_NormalMale:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, "en-US-News-M", virtualfriends_go.Gender_Gender_Male)
+		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Male, false)
 	case virtualfriends_go.VoiceType_VoiceType_NormalFemale1:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, "en-US-News-K", virtualfriends_go.Gender_Gender_Female)
+		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Female, false)
 	case virtualfriends_go.VoiceType_VoiceType_NormalFemale2:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, "en-US-News-L", virtualfriends_go.Gender_Gender_Female)
+		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Female, true)
 	case virtualfriends_go.VoiceType_VoiceType_Orc:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, "en-US-News-M", virtualfriends_go.Gender_Gender_Male)
+		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Male, false)
 	default:
 		return nil, fmt.Errorf("invalid voice_type: %v", voiceConfig.VoiceType)
 	}

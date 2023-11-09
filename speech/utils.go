@@ -8,6 +8,7 @@ import (
 
 	"github.com/iFaceless/godub"
 	"github.com/iFaceless/godub/converter"
+	"github.com/rylans/getlang"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 )
 
@@ -58,4 +59,9 @@ func Mp3ToWav(mp3Data []byte) ([]byte, error) {
 		return nil, err
 	}
 	return wavByteBuffer.Bytes(), nil
+}
+
+func DetectShortLanguageCode(raw string) string {
+	info := getlang.FromString(raw)
+	return info.LanguageCode()
 }
