@@ -45,6 +45,11 @@ func DownloadAllAssetBundles(ctx context.Context) error {
 		"w-00009",
 		"w-00010",
 		"w-00011",
+		"w-00012",
+		"w-00013",
+		"w-00014",
+		"w-00015",
+		"w-00016",
 	}
 
 	errGroup, groupCtx := errgroup.WithContext(ctx)
