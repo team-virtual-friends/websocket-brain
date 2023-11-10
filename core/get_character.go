@@ -72,7 +72,7 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 
 	lowerCharacterId := strings.ToLower(request.CharacterId)
 	if lowerCharacterId == "mina" {
-		if err := determineLoader("vf://blob/w-00006", response); err != nil {
+		if err := determineLoader("vf://blob/mina", response); err != nil {
 			err = fmt.Errorf("failed to determine loader for mina: %v", err)
 			logger.Error(err)
 			vfContext.sendResp(FromError(err))
