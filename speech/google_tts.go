@@ -3,7 +3,6 @@ package speech
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
@@ -17,7 +16,12 @@ type GoogleTtsConfig struct {
 }
 
 var (
-	UnsupportedLanguagePrefix = "unsupported language:"
+	defaultTtsConfig = GoogleTtsConfig{
+		fullLanguageCode:           "en-US",
+		femaleVoiceName:            "en-US-Standard-H",
+		alternativeFemaleVoiceName: "en-US-Neural2-F",
+		maleVoiceName:              "en-US-Standard-B",
+	}
 
 	languageCodeMap = map[string]GoogleTtsConfig{
 		"ar": GoogleTtsConfig{
@@ -199,28 +203,21 @@ func NewGoogleTtsClient(ctx context.Context) (*GoogleTtsClient, error) {
 func (t *GoogleTtsClient) TextToSpeech(ctx context.Context, text string, gender virtualfriends_go.Gender, withAlternativeFemaleVoice bool) ([]byte, error) {
 	shortLangCode := DetectShortLanguageCode(text)
 
-	fullLanguageCode, err := getFullLanguageCode(shortLangCode)
-	if err != nil {
-		return nil, err
-	}
+	fullLanguageCode := getFullLanguageCode(shortLangCode)
 
 	var voiceName string
 	ssmlGender := texttospeechpb.SsmlVoiceGender_NEUTRAL
 	switch gender {
 	case virtualfriends_go.Gender_Gender_Male:
 		ssmlGender = texttospeechpb.SsmlVoiceGender_MALE
-		voiceName, err = getMaleVoiceName(shortLangCode)
+		voiceName = getMaleVoiceName(shortLangCode)
 
 	case virtualfriends_go.Gender_Gender_Female:
 		ssmlGender = texttospeechpb.SsmlVoiceGender_FEMALE
-		voiceName, err = getFemaleVoiceName(shortLangCode, withAlternativeFemaleVoice)
+		voiceName = getFemaleVoiceName(shortLangCode, withAlternativeFemaleVoice)
 
 	default:
 		return nil, fmt.Errorf("unsupported gender: %v", gender)
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	req := &texttospeechpb.SynthesizeSpeechRequest{
@@ -246,42 +243,34 @@ func (t *GoogleTtsClient) TextToSpeech(ctx context.Context, text string, gender 
 	return resp.AudioContent, nil
 }
 
-func getFullLanguageCode(shortLangCode string) (string, error) {
+func getFullLanguageCode(shortLangCode string) string {
 	if val, exist := languageCodeMap[shortLangCode]; exist {
-		return val.fullLanguageCode, nil
+		return val.fullLanguageCode
 	}
-	return "", unsupportedLangaugeError(shortLangCode)
+	return defaultTtsConfig.fullLanguageCode
 }
 
-func getFemaleVoiceName(shortLangCode string, isAlternative bool) (string, error) {
+func getFemaleVoiceName(shortLangCode string, isAlternative bool) string {
 	if val, exist := languageCodeMap[shortLangCode]; exist {
 		voiceName := val.femaleVoiceName
 		if isAlternative {
 			voiceName = val.alternativeFemaleVoiceName
 		}
 		if len(voiceName) == 0 {
-			return "", unsupportedLangaugeError(shortLangCode)
+			return defaultTtsConfig.femaleVoiceName
 		}
-		return voiceName, nil
+		return voiceName
 	}
-	return "", unsupportedLangaugeError(shortLangCode)
+	return defaultTtsConfig.femaleVoiceName
 }
 
-func getMaleVoiceName(shortLangCode string) (string, error) {
+func getMaleVoiceName(shortLangCode string) string {
 	if val, exist := languageCodeMap[shortLangCode]; exist {
 		voiceName := val.maleVoiceName
 		if len(voiceName) == 0 {
-			return "", unsupportedLangaugeError(shortLangCode)
+			return defaultTtsConfig.maleVoiceName
 		}
-		return voiceName, nil
+		return voiceName
 	}
-	return "", unsupportedLangaugeError(shortLangCode)
-}
-
-func unsupportedLangaugeError(shortLangCode string) error {
-	return fmt.Errorf(UnsupportedLanguagePrefix + shortLangCode)
-}
-
-func IsUnsupportedLanguageError(err error) bool {
-	return strings.HasPrefix(err.Error(), UnsupportedLanguagePrefix)
+	return defaultTtsConfig.maleVoiceName
 }
