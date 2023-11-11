@@ -202,6 +202,9 @@ func NewGoogleTtsClient(ctx context.Context) (*GoogleTtsClient, error) {
 
 func (t *GoogleTtsClient) TextToSpeech(ctx context.Context, text string, gender virtualfriends_go.Gender, withAlternativeFemaleVoice bool) ([]byte, error) {
 	shortLangCode := DetectShortLanguageCode(text)
+	if len(shortLangCode) == 0 {
+		shortLangCode = "en"
+	}
 
 	fullLanguageCode := getFullLanguageCode(shortLangCode)
 

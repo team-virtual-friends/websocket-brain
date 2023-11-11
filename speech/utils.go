@@ -5,11 +5,16 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/iFaceless/godub"
 	"github.com/iFaceless/godub/converter"
-	"github.com/rylans/getlang"
+	"github.com/pemistahl/lingua-go"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
+)
+
+var (
+	linguaLanguageDetector = lingua.NewLanguageDetectorBuilder().FromAllLanguages().Build()
 )
 
 func PitchShift(ctx context.Context, inputData []byte, pitchShiftFactor float64) ([]byte, error) {
@@ -61,7 +66,9 @@ func Mp3ToWav(mp3Data []byte) ([]byte, error) {
 	return wavByteBuffer.Bytes(), nil
 }
 
-func DetectShortLanguageCode(raw string) string {
-	info := getlang.FromString(raw)
-	return info.LanguageCode()
+func DetectShortLanguageCode(text string) string {
+	if language, exists := linguaLanguageDetector.DetectLanguageOf(text); exists {
+		return strings.ToLower(language.IsoCode639_1().String())
+	}
+	return ""
 }
