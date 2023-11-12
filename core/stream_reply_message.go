@@ -33,7 +33,7 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	case *virtualfriends_go.StreamReplyMessageRequest_Wav:
 		speechToTextStart := time.Now()
 		wavBytes := request.CurrentMessage.(*virtualfriends_go.StreamReplyMessageRequest_Wav).Wav
-		text, err = speech.SpeechToText(ctx, wavBytes)
+		text, err = speech.SpeechToTextViaFlask(ctx, wavBytes)
 		if err != nil {
 			err = fmt.Errorf("failed to process speechToText in HandleStreamReplyMessage: %v", err)
 			logger.Error(err)

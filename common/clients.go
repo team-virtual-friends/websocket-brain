@@ -18,6 +18,7 @@ type Clients struct {
 	bigqueryClient  *BigQueryClient
 
 	chatGptClient *llm.ChatGptClient
+	whisperClient *speech.WhisperClient
 }
 
 var clients *Clients
@@ -63,7 +64,11 @@ func InitializeClients(ctx context.Context) error {
 	})
 
 	errGroup.Go(func() error {
-		clients.chatGptClient = llm.NewChatGptClient()
+		openaiClient := NewOpenAiClient()
+
+		clients.chatGptClient = llm.NewChatGptClient(openaiClient)
+		clients.whisperClient = speech.NewWhisperClient(openaiClient)
+
 		return nil
 	})
 
@@ -97,4 +102,8 @@ func (t *Clients) GetBigQueryClient() *BigQueryClient {
 
 func (t *Clients) GetChatGptClient() *llm.ChatGptClient {
 	return t.chatGptClient
+}
+
+func (t *Clients) GetWhisperClient() *speech.WhisperClient {
+	return t.whisperClient
 }

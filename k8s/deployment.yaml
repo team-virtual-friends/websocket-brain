@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: virtual-friends-app
-        image: gcr.io/ysong-chat/brain-go:fa6c6a2-7c1ee10a
+        image: gcr.io/ysong-chat/brain-go:2581cfb-a9b48999
         ports:
         - containerPort: 8080
         env:
@@ -36,7 +36,7 @@ spec:
             cpu: "2"
             ephemeral-storage: "4Gi"
       - name: virtual-friend-py-sidecar
-        image: gcr.io/ysong-chat/brain-py-sidecar:3db43a4-002c15d1
+        image: gcr.io/ysong-chat/flask-app:2581cfb-d56f4e9d
         ports:
         - containerPort: 8085
         env:
@@ -44,15 +44,15 @@ spec:
             value: "8085"
         resources:
           requests:
-            memory: "10Gi"
-            cpu: "2"
-            ephemeral-storage: "10Gi"
-            nvidia.com/gpu: "1"
+            memory: "1Gi"
+            cpu: "1"
+            ephemeral-storage: "2Gi"
+            # nvidia.com/gpu: "1"
           limits:
-            memory: "10Gi"
+            memory: "2Gi"
             cpu: "2"
-            ephemeral-storage: "10Gi"
-            nvidia.com/gpu: "1"
+            ephemeral-storage: "4Gi"
+            # nvidia.com/gpu: "1"
       tolerations:
       - key: "nvidia.com/gpu"
         operator: "Equal"

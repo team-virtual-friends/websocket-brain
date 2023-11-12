@@ -24,8 +24,6 @@ e.g.
 Q: can you show me a dance?
 A: sure, I am glad to do it [dance] <happy>.
 `
-
-	openAiApiKey = "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"
 )
 
 var (
@@ -36,9 +34,9 @@ type ChatGptClient struct {
 	client *openai.Client
 }
 
-func NewChatGptClient() *ChatGptClient {
+func NewChatGptClient(openaiClient *openai.Client) *ChatGptClient {
 	return &ChatGptClient{
-		client: openai.NewClient(openAiApiKey),
+		client: openaiClient,
 	}
 }
 

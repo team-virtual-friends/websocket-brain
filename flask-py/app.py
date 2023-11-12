@@ -6,20 +6,24 @@ import requests
 
 from flask import Flask, request
 from pydub import AudioSegment
-from faster_whisper import WhisperModel
+# from faster_whisper import WhisperModel
+
+import openai
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('gunicorn.error')
 
 app = Flask(__name__)
 
-env = os.environ.get('ENV', 'LOCAL')
-if env == 'PROD' or env == 'STAGING':
-    # Initialize the Whisper ASR model
-    faster_whisper_model = WhisperModel("large-v2", device="cuda", compute_type="float16")
-else:
-    # for local testing, use cpu.
-    faster_whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+openai.api_key = "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"
+
+# env = os.environ.get('ENV', 'LOCAL')
+# if env == 'PROD' or env == 'STAGING':
+#     # Initialize the Whisper ASR model
+#     faster_whisper_model = WhisperModel("large-v2", device="cuda", compute_type="float16")
+# else:
+#     # for local testing, use cpu.
+#     faster_whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
 
 # for speech_to_text_whisper_gpu specifically.
 class NamedBytesIO(io.BytesIO):
@@ -54,11 +58,22 @@ def pitch_shift(audio_bytes:bytes, octaves:float) -> bytes:
     # Export the audio as WAV format bytes
     return audio_segment.export(format="wav").read()
 
-def speech_to_text_whisper_gpu(wav_bytes:bytes) -> str:
-    audio_buffer = NamedBytesIO(wav_bytes, name="audio.wav")
-    segments, info = faster_whisper_model.transcribe(audio_buffer, beam_size=5)
-    transcribed_text = " ".join(segment.text for segment in segments)
-    return transcribed_text
+# def speech_to_text_whisper_gpu(wav_bytes:bytes) -> str:
+#     audio_buffer = NamedBytesIO(wav_bytes, name="audio.wav")
+#     segments, info = faster_whisper_model.transcribe(audio_buffer, beam_size=5)
+#     transcribed_text = " ".join(segment.text for segment in segments)
+#     return transcribed_text
+
+def speech_to_text_whisper(wav_bytes:bytes) -> (str, Exception):
+    try:
+        audio_buffer = NamedBytesIO(wav_bytes, name="audio.wav")
+        transcript = openai.Audio.transcribe("whisper-1", audio_buffer)
+        text = transcript['text']
+        logger.info(f"wav is transcribed to {text} with whisper")
+        return (text, None)
+    except Exception as e:
+        logger.error(f"error when trying to call whisper: {e}")
+        return ("", e)
 
 @app.route('/pitch_shift', methods=['POST'])
 def pitch_shift_handler():
@@ -87,7 +102,7 @@ def speech_to_text_handler():
             b64_encoded = data.get('b64_encoded', '')
             inputBytes = base64.b64decode(b64_encoded)
 
-            return speech_to_text_whisper_gpu(inputBytes)
+            return speech_to_text_whisper(inputBytes)
         except Exception as e:
             return "Exception: " + str(e), 400
     else:
