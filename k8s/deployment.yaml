@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: virtual-friends-app
-        image: gcr.io/ysong-chat/brain-go:2581cfb-a9b48999
+        image: gcr.io/ysong-chat/brain-go:b8c63be-f68016f8
         ports:
         - containerPort: 8080
         env:

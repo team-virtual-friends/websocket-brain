@@ -7,7 +7,6 @@ import (
 
 	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
-	"github.com/sieglu2/virtual-friends-brain/speech"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
 
@@ -16,7 +15,7 @@ func HandleAccumulateVoiceMessage(ctx context.Context, vfContext *VfContext, req
 
 	speechToTextStart := time.Now()
 	wavBytes := request.VoiceWav
-	text, err := speech.SpeechToTextViaFlask(ctx, wavBytes)
+	text, err := SpeechToTextViaWhisper(ctx, vfContext.clients.GetWhisperClient(), wavBytes, 3)
 	if err != nil {
 		err = fmt.Errorf("failed to process speechToText in HandleAccumulateVoiceMessage: %v", err)
 		logger.Error(err)

@@ -9,7 +9,6 @@ import (
 	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/llm"
-	"github.com/sieglu2/virtual-friends-brain/speech"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
 
@@ -33,7 +32,7 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	case *virtualfriends_go.StreamReplyMessageRequest_Wav:
 		speechToTextStart := time.Now()
 		wavBytes := request.CurrentMessage.(*virtualfriends_go.StreamReplyMessageRequest_Wav).Wav
-		text, err = speech.SpeechToTextViaFlask(ctx, wavBytes)
+		text, err = SpeechToTextViaWhisper(ctx, vfContext.clients.GetWhisperClient(), wavBytes, 3)
 		if err != nil {
 			err = fmt.Errorf("failed to process speechToText in HandleStreamReplyMessage: %v", err)
 			logger.Error(err)

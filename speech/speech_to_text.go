@@ -3,7 +3,6 @@ package speech
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/sashabaranov/go-openai"
@@ -20,13 +19,14 @@ func NewWhisperClient(openaiClient *openai.Client) *WhisperClient {
 	}
 }
 
-// SpeechToText is not working, it complaints format is not supported...
 func (t *WhisperClient) SpeechToText(ctx context.Context, wavBytes []byte) (string, error) {
 	logger := foundation.Logger()
 
 	request := openai.AudioRequest{
 		Model:  "whisper-1",
 		Reader: bytes.NewReader(wavBytes),
+		// this is needed to tell what format we have for the reader.
+		FilePath: "audio.wav",
 	}
 
 	response, err := t.client.CreateTranscription(ctx, request)
@@ -38,20 +38,4 @@ func (t *WhisperClient) SpeechToText(ctx context.Context, wavBytes []byte) (stri
 
 	logger.Debugf("transcribed text: %s", response.Text)
 	return response.Text, nil
-}
-
-func SpeechToTextViaFlask(ctx context.Context, wavBytes []byte) (string, error) {
-	logger := foundation.Logger()
-
-	encodedData := base64.StdEncoding.EncodeToString(wavBytes)
-	output, err := foundation.AccessLocalFlask(ctx, "speech_to_text", map[string]string{
-		"b64_encoded": encodedData,
-	})
-	if err != nil {
-		err = fmt.Errorf("error calling AccessLocalFlask for speech_to_text: %v", err)
-		logger.Error(err)
-		return "", err
-	}
-
-	return string(output), nil
 }

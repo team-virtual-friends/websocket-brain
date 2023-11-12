@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
 	"github.com/sieglu2/virtual-friends-brain/speech"
@@ -133,24 +132,15 @@ func assembleChatHistory(jsonMessages []string) string {
 	return resultBuilder.String()
 }
 
-func SpeechToTextViaWhisper(ctx context.Context, client *speech.WhisperClient, wavBytes []byte) (string, error) {
+func SpeechToTextViaWhisper(ctx context.Context, client *speech.WhisperClient, wavBytes []byte, maxRetries int) (string, error) {
 	logger := foundation.Logger()
 
-	backoffConfig := backoff.WithMaxRetries(backoff.NewConstantBackOff(100*time.Millisecond), 3)
-
 	var text string
-	err := backoff.Retry(func() error {
-		if ctx.Err() == context.DeadlineExceeded || ctx.Err() == context.Canceled {
-			return nil
-		}
-
+	err := foundation.DoRetry(ctx, func(timeoutCtx context.Context) error {
 		var sttErr error
-		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, 500*time.Millisecond)
 		text, sttErr = client.SpeechToText(timeoutCtx, wavBytes)
-		timeoutCancel()
-
 		return sttErr
-	}, backoffConfig)
+	}, maxRetries, 1200*time.Millisecond)
 
 	if err != nil {
 		err = fmt.Errorf("failed to speech_to_text with Whisper: %v", err)
