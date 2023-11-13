@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	splitChars       = ".;!?:,。；！？：，"
+	splitChars       = ".;!?:,。；！？：，،।።။．"
 	replyTextOnError = "sorry I'm having some troubles, can you try say it again? [no_action] <neutral>"
 
 	noMedicalQuestions = "Do not answer any medical related questions.\n"
@@ -131,18 +132,39 @@ func llmStreamReply(
 			}()
 		}
 
-		buffer.WriteString(replyText)
 		completeReply.WriteString(replyText)
-		if strings.Contains(splitChars, string(replyText[len(replyText)-1])) {
+
+		// logger.Infof("replyText: %s", replyText)
+		lastRune, _ := utf8.DecodeLastRuneInString(replyText)
+		if isSplitChar(lastRune) {
+			buffer.WriteString(replyText)
 			bufferString := buffer.String()
 			err := sendReply(ctx, vfContext, request, currentMessage, bufferString, replyIndex, false)
 			if err != nil {
-				err = fmt.Errorf("failed to sendReply(%s): %v", bufferString, err)
+				err = fmt.Errorf("failed to sendReply(%s) - isSplitChar: %v", bufferString, err)
 				logger.Error(err)
 				return err
 			}
 			replyIndex += 1
 			buffer.Reset()
+		} else {
+			firstSplited, secondSplited := splitString(replyText)
+			if len(firstSplited) > 0 {
+				buffer.WriteString(firstSplited)
+				bufferString := buffer.String()
+				err := sendReply(ctx, vfContext, request, currentMessage, bufferString, replyIndex, false)
+				if err != nil {
+					err = fmt.Errorf("failed to sendReply(%s) - len(firstSplited): %v", bufferString, err)
+					logger.Error(err)
+					return err
+				}
+				replyIndex += 1
+				buffer.Reset()
+
+				buffer.WriteString(secondSplited)
+			} else {
+				buffer.WriteString(replyText)
+			}
 		}
 
 		return nil
@@ -236,4 +258,49 @@ func sendReply(
 	_ = vfContext.sendResp(vfResponse)
 
 	return nil
+}
+
+func isSplitChar(char rune) bool {
+	// Define a list of Unicode characters that represent a period in different languages
+	periods := []rune{'.', ';', '!', '?', ':', ',', '。', '；', '！', '？', '：', '，', '،', '।', '።', '။', '．'}
+
+	// Check if the character is in the list of periods
+	for _, p := range periods {
+		if char == p {
+			return true
+		}
+	}
+
+	return false
+}
+
+func splitString(text string) (string, string) {
+	spliters := []rune{}
+	parts := strings.FieldsFunc(text, func(r rune) bool {
+		res := isSplitChar(r)
+		if res {
+			spliters = append(spliters, r)
+		}
+		return res
+	})
+	// for _, x := range parts {
+	// 	fmt.Println(x)
+	// }
+	// for i := 0; i < len(spliters); i++ {
+	// 	fmt.Println(rune(spliters[i]))
+	// }
+	if len(parts) > 1 {
+		first := strings.Builder{}
+		second := strings.Builder{}
+		i := 0
+		for ; i < len(spliters); i++ {
+			first.WriteString(parts[i])
+			first.WriteRune(spliters[i])
+		}
+		for ; i < len(parts); i++ {
+			second.WriteString(parts[i])
+		}
+		return first.String(), second.String()
+	}
+	return "", text
 }
