@@ -17,10 +17,10 @@ var (
 	linguaLanguageDetector = lingua.NewLanguageDetectorBuilder().FromAllLanguages().Build()
 )
 
-func PitchShift(ctx context.Context, inputData []byte, pitchShiftFactor float64) ([]byte, error) {
+func PitchShift(ctx context.Context, wavBytes []byte, pitchShiftFactor float64) ([]byte, error) {
 	logger := foundation.Logger()
 
-	encodedData := base64.StdEncoding.EncodeToString(inputData)
+	encodedData := base64.StdEncoding.EncodeToString(wavBytes)
 
 	output, err := foundation.AccessLocalFlask(ctx, "pitch_shift", map[string]string{
 		"octaves":     fmt.Sprintf("%f", pitchShiftFactor),

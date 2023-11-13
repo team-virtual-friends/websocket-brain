@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: virtual-friends-app
-        image: gcr.io/ysong-chat/brain-go:b8c63be-f68016f8
+        image: gcr.io/ysong-chat/brain-go:ae129bc-9d3e4d22
         ports:
         - containerPort: 8080
         env:
@@ -36,7 +36,7 @@ spec:
             cpu: "2"
             ephemeral-storage: "4Gi"
       - name: virtual-friend-py-sidecar
-        image: gcr.io/ysong-chat/flask-app:2581cfb-d56f4e9d
+        image: gcr.io/ysong-chat/flask-app:ae129bc-d7356fbd
         ports:
         - containerPort: 8085
         env:

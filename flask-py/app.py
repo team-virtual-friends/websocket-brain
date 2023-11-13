@@ -9,13 +9,15 @@ from pydub import AudioSegment
 # from faster_whisper import WhisperModel
 
 import openai
+from openai import OpenAI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('gunicorn.error')
 
 app = Flask(__name__)
 
-openai.api_key = "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"
+os.environ['OPENAI_API_KEY'] = "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"
+openaiClient = OpenAI()
 
 # env = os.environ.get('ENV', 'LOCAL')
 # if env == 'PROD' or env == 'STAGING':
@@ -64,16 +66,21 @@ def pitch_shift(audio_bytes:bytes, octaves:float) -> bytes:
 #     transcribed_text = " ".join(segment.text for segment in segments)
 #     return transcribed_text
 
-def speech_to_text_whisper(wav_bytes:bytes) -> (str, Exception):
-    try:
-        audio_buffer = NamedBytesIO(wav_bytes, name="audio.wav")
-        transcript = openai.Audio.transcribe("whisper-1", audio_buffer)
-        text = transcript['text']
-        logger.info(f"wav is transcribed to {text} with whisper")
-        return (text, None)
-    except Exception as e:
-        logger.error(f"error when trying to call whisper: {e}")
-        return ("", e)
+def text_to_speech(text:str, gender:str) -> bytes:
+    voiceName = "alloy"
+    if gender == "Gender_Male" or gender == "male":
+        voiceName = "echo"
+    elif gender == "Gender_Female" or gender == "female":
+        voiceName = "nova"
+    response = openaiClient.audio.speech.create(
+        model="tts-1",
+        voice=voiceName,
+        input=text,
+    )
+    bytesBuffer = io.BytesIO()
+    for data in response.iter_bytes():
+        bytesBuffer.write(data)
+    return bytesBuffer.getvalue()
 
 @app.route('/pitch_shift', methods=['POST'])
 def pitch_shift_handler():
@@ -93,16 +100,21 @@ def pitch_shift_handler():
     else:
         return "Unsupported request method", 405
     
-@app.route("/speech_to_text", methods=['POST'])
+@app.route("/text_to_speech", methods=['POST'])
 def speech_to_text_handler():
     if request.method == 'POST':
         try:
             data = request.json
 
-            b64_encoded = data.get('b64_encoded', '')
-            inputBytes = base64.b64decode(b64_encoded)
+            text = data.get('text', '')
+            gender = data.get('gender', '')
 
-            return speech_to_text_whisper(inputBytes)
+            if len(text) > 0:
+                mp3Bytes = text_to_speech(text, gender)
+                b64Encoded = base64.b64encode(mp3Bytes).decode('utf-8')
+                return b64Encoded
+
+            return ""
         except Exception as e:
             return "Exception: " + str(e), 400
     else:

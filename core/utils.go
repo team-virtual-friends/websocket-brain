@@ -34,19 +34,21 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	var voiceBytes []byte
 	var err error
 	switch voiceConfig.VoiceType {
-	case virtualfriends_go.VoiceType_VoiceType_NormalMale:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Male, false)
 	case virtualfriends_go.VoiceType_VoiceType_NormalFemale1:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Female, false)
+		fallthrough
 	case virtualfriends_go.VoiceType_VoiceType_NormalFemale2:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Female, true)
+		voiceBytes, err = speech.TextToSpeechWithFlask(ctx, text, virtualfriends_go.Gender_Gender_Female)
+
+	case virtualfriends_go.VoiceType_VoiceType_NormalMale:
+		fallthrough
 	case virtualfriends_go.VoiceType_VoiceType_Orc:
-		voiceBytes, err = vfContext.clients.GetGoogleTtsClient().TextToSpeech(ctx, text, virtualfriends_go.Gender_Gender_Male, false)
+		voiceBytes, err = speech.TextToSpeechWithFlask(ctx, text, virtualfriends_go.Gender_Gender_Male)
+
 	default:
 		return nil, fmt.Errorf("invalid voice_type: %v", voiceConfig.VoiceType)
 	}
 	if err != nil {
-		err = fmt.Errorf("failed to GoogleTtsClient.TextToSpeech: %v", err)
+		err = fmt.Errorf("failed to TextToSpeechWithFlask: %v", err)
 		logger.Error(err)
 		return nil, err
 	}
