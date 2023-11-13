@@ -134,10 +134,11 @@ func llmStreamReply(
 
 		completeReply.WriteString(replyText)
 
-		// logger.Infof("replyText: %s", replyText)
+		logger.Infof("replyText: %s", replyText)
+		buffer.WriteString(replyText)
+
 		lastRune, _ := utf8.DecodeLastRuneInString(replyText)
 		if isSplitChar(lastRune) {
-			buffer.WriteString(replyText)
 			bufferString := buffer.String()
 			err := sendReply(ctx, vfContext, request, currentMessage, bufferString, replyIndex, false)
 			if err != nil {
@@ -147,24 +148,6 @@ func llmStreamReply(
 			}
 			replyIndex += 1
 			buffer.Reset()
-		} else {
-			firstSplited, secondSplited := splitString(replyText)
-			if len(firstSplited) > 0 {
-				buffer.WriteString(firstSplited)
-				bufferString := buffer.String()
-				err := sendReply(ctx, vfContext, request, currentMessage, bufferString, replyIndex, false)
-				if err != nil {
-					err = fmt.Errorf("failed to sendReply(%s) - len(firstSplited): %v", bufferString, err)
-					logger.Error(err)
-					return err
-				}
-				replyIndex += 1
-				buffer.Reset()
-
-				buffer.WriteString(secondSplited)
-			} else {
-				buffer.WriteString(replyText)
-			}
 		}
 
 		return nil
