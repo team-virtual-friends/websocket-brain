@@ -12,7 +12,7 @@ import (
 func CreateThreadWithFlask(ctx context.Context) (string, error) {
 	logger := foundation.Logger()
 
-	output, err := foundation.AccessLocalFlask(ctx, "create_thread", "Get", nil)
+	output, err := foundation.AccessLocalFlask(ctx, "create_thread", "GET", nil)
 
 	if err != nil {
 		err = fmt.Errorf("error calling AccessLocalFlask for create_thread: %v", err)

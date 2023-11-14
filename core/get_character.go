@@ -135,15 +135,17 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		vfContext.assistantId = character.AssistantId
 		vfContext.openaiApiKey = character.OpenaiApiKey
 
-		// TODO(ysong): support user's openai api key
-		threadId, err := llm.CreateThreadWithFlask(ctx)
-		if err != nil {
-			err = fmt.Errorf("Error creating openai assistant thread:: %v", err)
-			logger.Error(err)
-			vfContext.sendResp(FromError(err))
-			return
+		if character.AssistantId != "" {
+			// TODO(ysong): support user's openai api key
+			threadId, err := llm.CreateThreadWithFlask(ctx)
+			if err != nil {
+				err = fmt.Errorf("Error creating openai assistant thread:: %v", err)
+				logger.Error(err)
+				vfContext.sendResp(FromError(err))
+				return
+			}
+			vfContext.threadId = threadId
 		}
-		vfContext.threadId = threadId
 
 		if err != nil {
 			err = fmt.Errorf("failed to QueryCharacter: %v", err)
