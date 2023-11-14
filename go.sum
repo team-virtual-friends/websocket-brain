@@ -116,6 +116,8 @@ github.com/rylans/getlang v0.0.0-20201227074721-9e7f44ff8aa0 h1:qSaU9YAEIxk/ozcm
 github.com/rylans/getlang v0.0.0-20201227074721-9e7f44ff8aa0/go.mod h1:3vfmZI6aJd5Rb9W2TQ0Nmupl+qem21R05+hmCscI0Bk=
 github.com/sashabaranov/go-openai v1.16.0 h1:34W6WV84ey6OpW0p2UewZkdMu82AxGC+BzpU6iiauRw=
 github.com/sashabaranov/go-openai v1.16.0/go.mod h1:lj5b/K+zjTSFxVLijLSTDZuP7adOgerWeFyZLUhAKRg=
+github.com/sashabaranov/go-openai v1.17.5 h1:ItBzlrrfTtkFWOFlgfOhk3y/xRBC4PJol4gdbiK7hgg=
+github.com/sashabaranov/go-openai v1.17.5/go.mod h1:lj5b/K+zjTSFxVLijLSTDZuP7adOgerWeFyZLUhAKRg=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

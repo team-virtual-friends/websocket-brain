@@ -46,7 +46,7 @@ require (
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/pemistahl/lingua-go v1.4.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
-	github.com/sashabaranov/go-openai v1.16.0 // indirect
+	github.com/sashabaranov/go-openai v1.17.5 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/tink-ab/tempfile v0.0.0-20180226111222-33beb0518f1a // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect

@@ -23,6 +23,8 @@ type CharacterInfo struct {
 	Greeting         string `datastore:"character_greeting"`
 	DescriptionGcsId string `datastore:"character_description"`
 	PromptsGcsId     string `datastore:"character_prompts"`
+	OpenaiApiKey     string `datastore:"api_key"`
+	AssistantId      string `datastore:"assistant_id"`
 
 	// description and prompts need to be looked up in GCS later, not from datastore directly.
 	Description string

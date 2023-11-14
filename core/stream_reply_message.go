@@ -46,26 +46,30 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 		latencyInMs := float64(speechToTextEnd.Sub(speechToTextStart).Milliseconds())
 		logger.Infof("speech_to_text.stream latency: %f ms", latencyInMs)
 		go func() {
-			if foundation.IsProd() {
-				vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
-					Env:          foundation.GetEnvironment(),
-					SessionId:    vfContext.sessionId,
-					UserId:       vfContext.userId,
-					UserIp:       vfContext.remoteAddrFromClient,
-					CharacterId:  request.MirroredContent.CharacterId,
-					LatencyType:  "speech_to_text.stream",
-					LatencyValue: latencyInMs,
-					Timestamp:    speechToTextEnd,
-				})
-			}
+			//if foundation.IsProd() {
+			vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+				Env:          foundation.GetEnvironment(),
+				SessionId:    vfContext.sessionId,
+				UserId:       vfContext.userId,
+				UserIp:       vfContext.remoteAddrFromClient,
+				CharacterId:  request.MirroredContent.CharacterId,
+				LatencyType:  "speech_to_text.stream",
+				LatencyValue: latencyInMs,
+				Timestamp:    speechToTextEnd,
+			})
+			//}
 		}()
 		logger.Infof("speechToText result: %s", text)
 
 	case *virtualfriends_go.StreamReplyMessageRequest_Text:
 		text = request.CurrentMessage.(*virtualfriends_go.StreamReplyMessageRequest_Text).Text
 	}
+	if vfContext.assistantId != "" {
+		err = assistantReply(ctx, vfContext, request, request.BasePrompts, text, request.JsonMessages)
+	} else {
+		err = llmStreamReply(ctx, vfContext, request, request.BasePrompts, text, request.JsonMessages)
+	}
 
-	err = llmStreamReply(ctx, vfContext, request, request.BasePrompts, text, request.JsonMessages)
 	if err != nil {
 		err = fmt.Errorf("failed to process speechToText: %v", err)
 		logger.Error(err)
@@ -75,6 +79,78 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	}
 
 	logger.Info("done streaming reply")
+}
+
+func assistantReply(
+	ctx context.Context, vfContext *VfContext, request *virtualfriends_go.StreamReplyMessageRequest,
+	basePrompts string, currentMessage string, chronicalJsons []string,
+) error {
+
+	//return llmStreamReply(ctx, vfContext, request, basePrompts, currentMessage, chronicalJsons)
+
+	logger := foundation.Logger()
+	var err error
+
+	firstJson := fmt.Sprintf(`{"role":"system","content":"%s"}`, basePrompts)
+	lastJson := fmt.Sprintf(`{"role":"user","content":"%s"}`, currentMessage)
+	chronicalJsons = append([]string{firstJson}, chronicalJsons...)
+	chronicalJsons = append(chronicalJsons, lastJson)
+
+	vfContext.savedCharacterId = request.MirroredContent.CharacterId
+	vfContext.savedJsonMessages = chronicalJsons[1:]
+
+	replyIndex := 0
+
+	threadId := vfContext.threadId
+	assistantId := vfContext.assistantId
+
+	llmInferStart := time.Now()
+
+	messageResponse, err := llm.CreateMessageAndRunThreadWithFlask(ctx, threadId, assistantId, currentMessage)
+
+	llmInferEnd := time.Now()
+	latencyInMs := float64(llmInferEnd.Sub(llmInferStart).Milliseconds())
+	logger.Infof("CreateMessageAndRunThreadWithFlask latency: %f ms", latencyInMs)
+	go func() {
+		//if foundation.IsProd() {
+		vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+			Env:          foundation.GetEnvironment(),
+			SessionId:    vfContext.sessionId,
+			UserId:       vfContext.userId,
+			UserIp:       vfContext.remoteAddrFromClient,
+			CharacterId:  vfContext.savedCharacterId,
+			LatencyType:  "CreateMessageAndRunThreadWithFlask",
+			LatencyValue: latencyInMs,
+			Timestamp:    llmInferEnd,
+		})
+		//}
+	}()
+
+	if err != nil {
+		err = fmt.Errorf("failed to CreateMessageAndRunThreadWithFlask(%s): %v", threadId, err)
+		logger.Error(err)
+		return err
+	}
+
+	substrings := splitCompleteResponse(messageResponse)
+
+	for _, substring := range substrings {
+		err := sendReply(ctx, vfContext, request, currentMessage, substring, replyIndex, false)
+		if err != nil {
+			err = fmt.Errorf("failed to sendReply(%s): %v", substring, err)
+			logger.Error(err)
+			return err
+		}
+		replyIndex++
+	}
+
+	sendStopReply(ctx, vfContext, request, replyIndex)
+
+	vfContext.savedJsonMessages = append(
+		vfContext.savedJsonMessages,
+		fmt.Sprintf(`{"role":"assistant","content":"%s"}`, messageResponse))
+
+	return nil
 }
 
 func llmStreamReply(
@@ -117,18 +193,18 @@ func llmStreamReply(
 			latencyInMs := float64(llmInferEnd.Sub(llmInferStart).Milliseconds())
 			logger.Infof("llm_infer latency: %f ms", latencyInMs)
 			go func() {
-				if foundation.IsProd() {
-					vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
-						Env:          foundation.GetEnvironment(),
-						SessionId:    vfContext.sessionId,
-						UserId:       vfContext.userId,
-						UserIp:       vfContext.remoteAddrFromClient,
-						CharacterId:  request.MirroredContent.CharacterId,
-						LatencyType:  "llm_infer",
-						LatencyValue: latencyInMs,
-						Timestamp:    llmInferEnd,
-					})
-				}
+				//if foundation.IsProd() {
+				vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+					Env:          foundation.GetEnvironment(),
+					SessionId:    vfContext.sessionId,
+					UserId:       vfContext.userId,
+					UserIp:       vfContext.remoteAddrFromClient,
+					CharacterId:  request.MirroredContent.CharacterId,
+					LatencyType:  "llm_infer",
+					LatencyValue: latencyInMs,
+					Timestamp:    llmInferEnd,
+				})
+				//}
 			}()
 		}
 
@@ -218,7 +294,27 @@ func sendReply(
 					response.TranscribedText = currentMessage
 				}
 
+				textToSpeechStart := time.Now()
 				replyWav, err := GenerateVoice(ctx, vfContext, reply, request.VoiceConfig)
+				textToSpeechEnd := time.Now()
+				latencyInMs := float64(textToSpeechEnd.Sub(textToSpeechStart).Milliseconds())
+				logger.Infof("TextToSpeech latency: %f ms", latencyInMs)
+
+				go func() {
+					//if foundation.IsProd() {
+					vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+						Env:          foundation.GetEnvironment(),
+						SessionId:    vfContext.sessionId,
+						UserId:       vfContext.userId,
+						UserIp:       vfContext.remoteAddrFromClient,
+						CharacterId:  vfContext.savedCharacterId,
+						LatencyType:  "TextToSpeech",
+						LatencyValue: latencyInMs,
+						Timestamp:    textToSpeechEnd,
+					})
+					//}
+				}()
+
 				if err != nil {
 					err = fmt.Errorf("failed to generate voice: %v", err)
 					logger.Error(err)
@@ -286,4 +382,29 @@ func splitString(text string) (string, string) {
 		return first.String(), second.String()
 	}
 	return "", text
+}
+
+// splitCompleteResponse splits a string into substrings based on split characters
+func splitCompleteResponse(s string) []string {
+	var result []string
+	var current strings.Builder
+
+	for _, char := range s {
+		if isSplitChar(char) {
+			if current.Len() > 0 {
+				result = append(result, current.String())
+				current.Reset()
+			}
+			result = append(result, string(char)) // Include the split character as a separate element
+		} else {
+			current.WriteRune(char)
+		}
+	}
+
+	// Append any remaining characters
+	if current.Len() > 0 {
+		result = append(result, current.String())
+	}
+
+	return result
 }

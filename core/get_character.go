@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sieglu2/virtual-friends-brain/common"
 	"github.com/sieglu2/virtual-friends-brain/foundation"
+	"github.com/sieglu2/virtual-friends-brain/llm"
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
 
@@ -130,6 +131,20 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 		response.BasePrompts = common.ExampleCharacterPrompts["einstein"]
 	} else {
 		character, err := vfContext.clients.GetDatastoreClient().QueryCharacter(ctx, request.CharacterId)
+
+		vfContext.assistantId = character.AssistantId
+		vfContext.openaiApiKey = character.OpenaiApiKey
+
+		// TODO(ysong): support user's openai api key
+		threadId, err := llm.CreateThreadWithFlask(ctx)
+		if err != nil {
+			err = fmt.Errorf("Error creating openai assistant thread:: %v", err)
+			logger.Error(err)
+			vfContext.sendResp(FromError(err))
+			return
+		}
+		vfContext.threadId = threadId
+
 		if err != nil {
 			err = fmt.Errorf("failed to QueryCharacter: %v", err)
 			logger.Error(err)

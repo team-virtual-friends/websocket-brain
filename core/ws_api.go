@@ -52,6 +52,9 @@ type VfContext struct {
 	userId               string
 	sessionId            string
 	runtimeEnv           virtualfriends_go.RuntimeEnv
+	openaiApiKey         string
+	assistantId          string
+	threadId             string
 
 	// these are updated via HandleStreamReplyMessage.
 	savedCharacterId  string
@@ -136,6 +139,10 @@ func InGame(w http.ResponseWriter, r *http.Request) {
 		vfContext.sessionId = vfRequest.SessionId
 		vfContext.runtimeEnv = vfRequest.RuntimeEnv
 		vfContext.remoteAddrFromClient = vfRequest.IpAddr
+
+		logger.Errorf("vfContext.assistantId: %v", vfContext.assistantId)
+		logger.Errorf("vfContext.openaiApiKey: %v", vfContext.openaiApiKey)
+		logger.Errorf("vfContext.threadId: %v", vfContext.threadId)
 
 		handlingCtx, handlingCancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer handlingCancel()

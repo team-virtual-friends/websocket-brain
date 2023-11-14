@@ -3,6 +3,8 @@ import io
 import logging
 import os
 import requests
+import time
+
 
 from flask import Flask, request
 from pydub import AudioSegment
@@ -119,6 +121,135 @@ def speech_to_text_handler():
             return "Exception: " + str(e), 400
     else:
         return "Unsupported request method", 405
+
+
+def create_thread(client):
+    """
+    Creates a new thread using the provided OpenAI client.
+
+    Args:
+        client: The OpenAI client instance to use for creating the thread.
+
+    Returns:
+        The created thread object.
+    """
+    my_thread = client.beta.threads.create()
+    return my_thread
+
+
+
+def wait_for_run_completion(client, thread_id, poll_interval=0.2, timeout=10):
+    """
+    Waits for the latest run in a thread to either complete or fail, with a timeout.
+
+    Args:
+        client: The OpenAI client instance.
+        thread_id: The ID of the thread to monitor.
+        poll_interval: Time in seconds to wait between each status check.
+        timeout: Maximum time to wait for run completion in seconds.
+
+    Returns:
+        A tuple containing a boolean indicating success and an error message if any.
+    """
+    start_time = time.time()
+
+    while True:
+        # Check if the timeout is exceeded
+        if time.time() - start_time > timeout:
+            return False, "Timeout exceeded while waiting for run to complete."
+
+        # Check the run status
+        runs = client.beta.threads.runs.list(thread_id)
+        latest_run = runs.data[0]
+        if latest_run.status == "completed":
+            return True, None  # Successful completion
+        elif latest_run.status == "failed":
+            return False, "Run failed."
+
+        time.sleep(poll_interval)  # Wait before the next check
+
+
+def create_message_and_run_thread(client, thread_id, assistant_id, content):
+    """
+    Creates a message in a thread, initiates a run, waits for completion,
+    and retrieves the latest messages in the thread.
+
+    Args:
+        client: The OpenAI client instance.
+        thread_id: The ID of the thread to interact with.
+        assistant_id: The ID of the assistant to run.
+        content: The content of the message to be sent.
+
+    Returns:
+        The latest message text or None if no message is retrieved or if an error occurs.
+    """
+
+    # Send the user's message to the thread
+    start = time.time()
+    client.beta.threads.messages.create(thread_id=thread_id, role="user", content=content)
+    logger.info(f"Time to create message: {time.time() - start} seconds")
+
+    # Initiate a run with the assistant
+    start = time.time()
+    client.beta.threads.runs.create(thread_id=thread_id, assistant_id=assistant_id)
+    logger.info(f"Time to create run: {time.time() - start} seconds")
+
+    # Wait for the run to complete or fail
+    start = time.time()
+    success, error = wait_for_run_completion(client, thread_id)
+    if not success:
+        logger.error(f"Error: {error}")
+        return None
+    logger.info(f"Time to wait for run completion: {time.time() - start} seconds")
+
+    # Retrieve and process the messages from the thread
+    start = time.time()
+    response = client.beta.threads.messages.list(thread_id=thread_id)
+    logger.info(f"Time to retrieve messages: {time.time() - start} seconds")
+
+    # Iterate through the messages and return the latest message text
+    for message in response.data:
+        message_text = message.content[0].text.value
+        if message_text.strip() != "":
+            return message_text.strip()
+
+    return None
+
+
+@app.route('/create_thread', methods=['GET'])
+def create_thread_handler():
+    try:
+        # Call the create_thread function to create a new thread
+        new_thread = create_thread(openaiClient)
+        logger.info("New thread created: " + new_thread.id)
+
+        return {"thread_id": new_thread.id}
+    except Exception as e:
+        logger.error("Exception in create_thread: " + str(e))
+        return "Exception: " + str(e), 500
+
+
+@app.route('/create_message_and_run_thread', methods=['POST'])
+def create_message_and_run_thread_handler():
+    if request.method == 'POST':
+        try:
+            data = request.json
+            thread_id = data.get('thread_id', '')
+            assistant_id = data.get('assistant_id', '')
+            content = data.get('content', '')
+
+            if thread_id and assistant_id and content:
+                message_response = create_message_and_run_thread(openaiClient, thread_id, assistant_id, content)
+                return {"response": message_response}
+            else:
+                return "Missing required parameters", 400
+
+        except Exception as e:
+            logger.error("Exception in create_message_and_run_thread: " + str(e))
+            return "Exception: " + str(e), 500
+    else:
+        return "Unsupported request method", 405
+
 
 if __name__ == '__main__':
     env = os.environ.get('ENV', 'LOCAL')

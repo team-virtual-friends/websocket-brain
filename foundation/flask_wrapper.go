@@ -42,7 +42,7 @@ func (t *LocalFlaskClient) getHttpClient() *http.Client {
 	return t.httpClient
 }
 
-func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[string]string) (string, error) {
+func AccessLocalFlask(ctx context.Context, endpoint string, method string, parameters map[string]string) (string, error) {
 	logger := Logger()
 
 	url := localFlaskClient.getUrl(endpoint)
@@ -63,7 +63,7 @@ func AccessLocalFlask(ctx context.Context, endpoint string, parameters map[strin
 	paramsBuilder.WriteString("}")
 
 	// Create a request with the payload
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer([]byte(paramsBuilder.String())))
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer([]byte(paramsBuilder.String())))
 	if err != nil {
 		err = fmt.Errorf("error creating request: %v", err)
 		logger.Error(err)

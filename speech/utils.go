@@ -22,7 +22,7 @@ func PitchShift(ctx context.Context, wavBytes []byte, pitchShiftFactor float64) 
 
 	encodedData := base64.StdEncoding.EncodeToString(wavBytes)
 
-	output, err := foundation.AccessLocalFlask(ctx, "pitch_shift", map[string]string{
+	output, err := foundation.AccessLocalFlask(ctx, "pitch_shift", "POST", map[string]string{
 		"octaves":     fmt.Sprintf("%f", pitchShiftFactor),
 		"b64_encoded": encodedData,
 	})

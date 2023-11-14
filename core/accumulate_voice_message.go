@@ -27,18 +27,18 @@ func HandleAccumulateVoiceMessage(ctx context.Context, vfContext *VfContext, req
 	latencyInMs := float64(speechToTextEnd.Sub(speechToTextStart).Milliseconds())
 	logger.Infof("speech_to_text.accu latency: %f ms", latencyInMs)
 	go func() {
-		if foundation.IsProd() {
-			vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
-				Env:          foundation.GetEnvironment(),
-				SessionId:    vfContext.sessionId,
-				UserId:       vfContext.userId,
-				UserIp:       vfContext.remoteAddrFromClient,
-				CharacterId:  "<accu>",
-				LatencyType:  "speech_to_text.accu",
-				LatencyValue: latencyInMs,
-				Timestamp:    speechToTextEnd,
-			})
-		}
+		//if foundation.IsProd() {
+		vfContext.clients.GetBigQueryClient().WriteLatencyStats(&common.LatencyStats{
+			Env:          foundation.GetEnvironment(),
+			SessionId:    vfContext.sessionId,
+			UserId:       vfContext.userId,
+			UserIp:       vfContext.remoteAddrFromClient,
+			CharacterId:  "<accu>",
+			LatencyType:  "speech_to_text.accu",
+			LatencyValue: latencyInMs,
+			Timestamp:    speechToTextEnd,
+		})
+		//}
 	}()
 
 	vfContext.accumulatedMessage.WriteString(text)
