@@ -20,9 +20,10 @@ func main() {
 	// Set your assistant ID and content for testing
 	assistantID := "asst_xIHAFLR0eWlTYrRcIeoG0xvj" // Replace with your actual assistant ID
 	content := "Hello, what's your name?"
+	apikey := "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"
 
 	// Test creating a message and running a thread
-	messageResponse, err := llm.CreateMessageAndRunThreadWithFlask(ctx, threadID, assistantID, content)
+	messageResponse, err := llm.CreateMessageAndRunThreadWithFlask(ctx, threadID, apikey, assistantID, content)
 	if err != nil {
 		fmt.Println("Error creating message and running thread:", err)
 		return
@@ -32,7 +33,7 @@ func main() {
 	content = "what is my first question?"
 
 	// Test creating a message and running a thread
-	messageResponse, err = llm.CreateMessageAndRunThreadWithFlask(ctx, threadID, assistantID, content)
+	messageResponse, err = llm.CreateMessageAndRunThreadWithFlask(ctx, threadID, apikey, assistantID, content)
 	if err != nil {
 		fmt.Println("Error creating message and running thread:", err)
 		return

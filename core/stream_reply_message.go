@@ -103,10 +103,11 @@ func assistantReply(
 
 	threadId := vfContext.threadId
 	assistantId := vfContext.assistantId
+	apiKey := vfContext.openaiApiKey
 
 	llmInferStart := time.Now()
 
-	messageResponse, err := llm.CreateMessageAndRunThreadWithFlask(ctx, threadId, assistantId, currentMessage)
+	messageResponse, err := llm.CreateMessageAndRunThreadWithFlask(ctx, threadId, apiKey, assistantId, currentMessage)
 
 	llmInferEnd := time.Now()
 	latencyInMs := float64(llmInferEnd.Sub(llmInferStart).Milliseconds())
