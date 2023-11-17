@@ -39,11 +39,12 @@ func CreateThreadWithFlask(ctx context.Context) (string, error) {
 }
 
 // CreateMessageAndRunThreadWithFlask calls the Flask endpoint to create a message and run a thread
-func CreateMessageAndRunThreadWithFlask(ctx context.Context, threadID, assistantID, content string) (string, error) {
+func CreateMessageAndRunThreadWithFlask(ctx context.Context, threadID, apiKey, assistantID, content string) (string, error) {
 	logger := foundation.Logger()
 
 	data := map[string]string{
 		"thread_id":    threadID,
+		"api_key":      apiKey,
 		"assistant_id": assistantID,
 		"content":      content,
 	}

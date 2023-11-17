@@ -18,8 +18,11 @@ logger = logging.getLogger('gunicorn.error')
 
 app = Flask(__name__)
 
-os.environ['OPENAI_API_KEY'] = "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"
-openaiClient = OpenAI()
+# os.environ['OPENAI_API_KEY'] = "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"
+# openaiClient = OpenAI()
+
+openaiClient = openai.Client(api_key="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")
+
 
 # env = os.environ.get('ENV', 'LOCAL')
 # if env == 'PROD' or env == 'STAGING':
@@ -235,11 +238,16 @@ def create_message_and_run_thread_handler():
         try:
             data = request.json
             thread_id = data.get('thread_id', '')
+            api_key = data.get('api_key', '')
             assistant_id = data.get('assistant_id', '')
             content = data.get('content', '')
 
+            start = time.time()
+            client = openai.Client(api_key=api_key)
+            logger.info(f"Time to create new openai client: {time.time() - start} seconds")
+
             if thread_id and assistant_id and content:
-                message_response = create_message_and_run_thread(openaiClient, thread_id, assistant_id, content)
+                message_response = create_message_and_run_thread(client, thread_id, assistant_id, content)
                 return {"response": message_response}
             else:
                 return "Missing required parameters", 400
