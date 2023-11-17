@@ -138,11 +138,12 @@ func SpeechToTextViaWhisper(ctx context.Context, client *speech.WhisperClient, w
 	logger := foundation.Logger()
 
 	var text string
+	// TODO: Consider run these DoTries in parallel.
 	err := foundation.DoRetry(ctx, func(timeoutCtx context.Context) error {
 		var sttErr error
 		text, sttErr = client.SpeechToText(timeoutCtx, wavBytes)
 		return sttErr
-	}, maxRetries, 1200*time.Millisecond)
+	}, maxRetries, 3000*time.Millisecond)
 
 	if err != nil {
 		err = fmt.Errorf("failed to speech_to_text with Whisper: %v", err)
