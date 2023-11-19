@@ -215,6 +215,14 @@ func HandleGetCharacter(ctx context.Context, vfContext *VfContext, request *virt
 			return
 		}
 		response.GreetingWav = voiceBytes
+
+		vfContext.historyJsonMessages, err = loadChatHistoryFromGcs(ctx, vfContext, request.CharacterId, vfContext.userId)
+		if err != nil {
+			err = fmt.Errorf("failed to loadChatHistoryFromGcs: %v", err)
+			logger.Error(err)
+			// not an strict error.
+			vfContext.historyJsonMessages = []string{}
+		}
 	}
 
 	vfResponse := &virtualfriends_go.VfResponse{

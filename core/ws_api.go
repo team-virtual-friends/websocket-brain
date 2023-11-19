@@ -60,6 +60,9 @@ type VfContext struct {
 	savedCharacterId  string
 	savedJsonMessages []string
 
+	// the raw chat history happened between the user and character saved in GCS.
+	historyJsonMessages []string
+
 	clients *common.Clients
 
 	// for saving the accumulated message transcribed in HandleAccumulateVoiceMessage
@@ -95,9 +98,9 @@ func OnConnect(conn *websocket.Conn) *VfContext {
 func OnDisconnect(vfContext *VfContext) {
 	logger := foundation.Logger()
 
-	if foundation.IsProd() && len(vfContext.savedJsonMessages) > 0 {
+	if len(vfContext.savedJsonMessages) > 0 {
 		disconnectTime := time.Now()
-		go logChatHistory(vfContext, &common.ChatHistory{
+		chatHistoryObject := &common.ChatHistory{
 			UserId:        vfContext.userId,
 			UserIp:        vfContext.remoteAddrFromClient,
 			CharacterId:   vfContext.savedCharacterId,
@@ -105,7 +108,11 @@ func OnDisconnect(vfContext *VfContext) {
 			Timestamp:     disconnectTime,
 			ChatSessionId: vfContext.sessionId,
 			RuntimeEnv:    vfContext.runtimeEnv.String(),
-		}, disconnectTime)
+		}
+		if foundation.IsProd() {
+			go logChatHistoryToBq(vfContext, chatHistoryObject)
+		}
+		go logChatHistoryToGcs(vfContext, chatHistoryObject)
 	}
 	logger.Infof("disconnected.")
 }

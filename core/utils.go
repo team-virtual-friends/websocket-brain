@@ -13,6 +13,10 @@ import (
 	"github.com/sieglu2/virtual-friends-brain/virtualfriends_go"
 )
 
+const (
+	bucketChatHistory = "vf-chat-histories"
+)
+
 type ChatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
@@ -65,10 +69,10 @@ func GenerateVoice(ctx context.Context, vfContext *VfContext, text string, voice
 	return wavBytes, nil
 }
 
-func logChatHistory(vfContext *VfContext, chatHistory *common.ChatHistory, eventTime time.Time) error {
+func logChatHistoryToBq(vfContext *VfContext, chatHistory *common.ChatHistory) error {
 	logger := foundation.Logger()
 
-	logger.Infof("logging chat history: %+v", chatHistory)
+	logger.Infof("logging chat history to BQ: %+v", chatHistory)
 
 	bqClient := vfContext.clients.GetBigQueryClient()
 	err := bqClient.WriteChatHistory(chatHistory)
@@ -80,6 +84,73 @@ func logChatHistory(vfContext *VfContext, chatHistory *common.ChatHistory, event
 
 	logger.Info("done writing the chat history")
 	return nil
+}
+
+func logChatHistoryToGcs(vfContext *VfContext, chatHistory *common.ChatHistory) error {
+	logger := foundation.Logger()
+
+	if len(chatHistory.UserId) == 0 {
+		// empty userId, meaning it's an anonymous chat, let's not log the history.
+		logger.Infof("empty userId, not gonna log chat history")
+		return nil
+	}
+
+	logger.Infof("logging chat history to GCS: %+v", chatHistory)
+
+	gcsClient := vfContext.clients.GetGcsClient()
+	path := fmt.Sprintf("%s/%s", chatHistory.CharacterId, chatHistory.UserId)
+
+	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	err := gcsClient.SaveContentToGcs(timeoutCtx, bucketChatHistory, path, chatHistory.ChatHistory)
+	timeoutCancel()
+
+	if err != nil {
+		err = fmt.Errorf("failed to SaveContentToGcs: %v", err)
+		logger.Error(err)
+		return err
+	}
+
+	return nil
+}
+
+func loadChatHistoryFromGcs(ctx context.Context, vfContext *VfContext, characterId, userId string) ([]string, error) {
+	logger := foundation.Logger()
+
+	if len(userId) == 0 {
+		logger.Infof("empty userId, no history is available")
+		return []string{}, nil
+	}
+
+	path := fmt.Sprintf("%s/%s", characterId, userId)
+	rawChatHistory, err := vfContext.clients.GetGcsClient().LoadContentFromGcs(ctx, bucketChatHistory, path)
+	if err != nil {
+		err = fmt.Errorf("failed to LoadContentFromGcs: %v", err)
+		logger.Error(err)
+		return []string{}, err
+	}
+
+	splitedChatHistory := strings.Split(rawChatHistory, "\n")
+	result := make([]string, 0, len(splitedChatHistory))
+	for _, line := range splitedChatHistory {
+		colonIndex := 0
+		for ; colonIndex < len(line); colonIndex += 1 {
+			if line[colonIndex] == ':' {
+				break
+			}
+		}
+		if colonIndex == len(line) {
+			logger.Errorf("invalid chat history line: %s", line)
+			continue
+		}
+
+		roleName := strings.Trim(line[:colonIndex], " ")
+		if roleName == "A" {
+			roleName = "assistent"
+		}
+		content := strings.Trim(line[colonIndex+1:], " ")
+		result = append(result, fmt.Sprintf(`{"role":"%s","content":"%s"}`, roleName, content))
+	}
+	return result, nil
 }
 
 func assembleChatHistory(jsonMessages []string) string {
