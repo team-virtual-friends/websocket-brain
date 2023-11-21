@@ -172,9 +172,12 @@ func llmStreamReply(
 	basePrompts = strings.ReplaceAll(basePrompts, "\n", "\\n")
 
 	firstJson := fmt.Sprintf(`{"role":"system","content":"%s"}`, basePrompts)
-	lastJson := fmt.Sprintf(`{"role":"user","content":"%s"}`, currentMessage)
 	chronicalJsons = append([]string{firstJson}, chronicalJsons...)
+	chronicalJsons = append(chronicalJsons, vfContext.historyJsonMessages...)
+
+	lastJson := fmt.Sprintf(`{"role":"user","content":"%s"}`, currentMessage)
 	chronicalJsons = append(chronicalJsons, lastJson)
+	// logger.Infof("chronicalJsons: %+v", chronicalJsons)
 
 	vfContext.savedCharacterId = request.MirroredContent.CharacterId
 	vfContext.savedJsonMessages = chronicalJsons[1:]
