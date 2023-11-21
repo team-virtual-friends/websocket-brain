@@ -64,6 +64,7 @@ func HandleStreamReplyMessage(ctx context.Context, vfContext *VfContext, request
 	case *virtualfriends_go.StreamReplyMessageRequest_Text:
 		text = request.CurrentMessage.(*virtualfriends_go.StreamReplyMessageRequest_Text).Text
 	}
+	text = strings.ReplaceAll(text, "\"", "'")
 	if vfContext.assistantId != "" {
 		err = assistantReply(ctx, vfContext, request, request.BasePrompts, text, request.JsonMessages)
 	} else {
