@@ -145,7 +145,7 @@ func loadChatHistoryFromGcs(ctx context.Context, vfContext *VfContext, character
 
 		roleName := strings.Trim(line[:colonIndex], " ")
 		if roleName == "A" {
-			roleName = "assistent"
+			roleName = "assistant"
 		}
 		content := strings.Trim(line[colonIndex+1:], " ")
 		result = append(result, fmt.Sprintf(`{"role":"%s","content":"%s"}`, roleName, content))
