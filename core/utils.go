@@ -129,27 +129,48 @@ func loadChatHistoryFromGcs(ctx context.Context, vfContext *VfContext, character
 		return []string{}, err
 	}
 
+	rawChatHistory = strings.ReplaceAll(rawChatHistory, "\"", "'")
+	logger.Infof("rawChatHistory: %s", rawChatHistory)
+
 	splitedChatHistory := strings.Split(rawChatHistory, "\n")
 	result := make([]string, 0, len(splitedChatHistory))
-	for _, line := range splitedChatHistory {
-		colonIndex := 0
-		for ; colonIndex < len(line); colonIndex += 1 {
-			if line[colonIndex] == ':' {
+
+	lastRoleName := ""
+	messageBuffer := strings.Builder{}
+
+	for lineIndex := 0; lineIndex < len(splitedChatHistory); lineIndex += 1 {
+		roleName := ""
+		charIndex := 0
+		for ; charIndex < len(splitedChatHistory[lineIndex]); charIndex += 1 {
+			if splitedChatHistory[lineIndex][charIndex] == ':' {
+				roleName = splitedChatHistory[lineIndex][:charIndex]
 				break
 			}
 		}
-		if colonIndex == len(line) {
-			logger.Errorf("invalid chat history line: %s", line)
-			continue
-		}
 
-		roleName := strings.Trim(line[:colonIndex], " ")
-		if roleName == "A" {
-			roleName = "assistant"
+		if len(roleName) == 0 {
+			messageBuffer.WriteString(splitedChatHistory[lineIndex])
+		} else {
+			if lastRoleName == "A" {
+				lastRoleName = "assistant"
+			}
+			result = append(result, fmt.Sprintf(`{"role":"%s","content":"%s"}`, lastRoleName, messageBuffer.String()))
+
+			lastRoleName = roleName
+			messageBuffer.Reset()
+			messageBuffer.WriteString(splitedChatHistory[lineIndex][charIndex+1:])
 		}
-		content := strings.Trim(line[colonIndex+1:], " ")
-		result = append(result, fmt.Sprintf(`{"role":"%s","content":"%s"}`, roleName, content))
 	}
+
+	if lastRoleName == "A" {
+		lastRoleName = "assistant"
+	}
+	result = append(result, fmt.Sprintf(`{"role":"%s","content":"%s"}`, lastRoleName, messageBuffer.String()))
+
+	for _, res := range result {
+		logger.Infof("res: %s", res)
+	}
+
 	return result, nil
 }
 
