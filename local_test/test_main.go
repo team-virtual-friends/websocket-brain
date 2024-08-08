@@ -9,7 +9,7 @@ var (
 	splitChars = []rune{'.', ';', '!', '?', ':', ',', '。', '；', '！', '？', '：', '，', '،', '।', '።', '။', '．'}
 )
 
-func main() {
+func main2() {
 	testRun("是的，我xyz.可以說中文。請問a有什麼我，可以為您服務")
 	testRun("服務")
 	testRun("，")
