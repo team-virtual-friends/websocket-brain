@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/sieglu2/virtual-friends-brain/llm"
 )
 
-func main() {
+func main1() {
 	ctx := context.Background()
 
 	// Test creating a thread
